@@ -1,0 +1,1655 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Laboratorio de Radiación de Cuerpo Negro</title>
+<style>
+/* Disposición: barra superior fija + laboratorio en tres columnas (controles | escena | resultados) que se apilan en pantallas estrechas. */
+:root {
+  --bg: #eef2f6;
+  --surface: #ffffff;
+  --surface-2: #e4eaf1;
+  --surface-3: #d6dee9;
+  --ink: #132033;
+  --ink-2: #48586f;
+  --ink-3: #6d7c92;
+  --line: #c9d3e0;
+  --accent: #a85b07;        /* luz estelar (ámbar) */
+  --accent-ink: #ffffff;
+  --data: #1d6b89;          /* datos / magnitudes calculadas */
+  --good: #1f7a46;
+  --warn: #8f6200;
+  --bad: #b3261e;
+  --c1: #1d6b89; --c2: #b8560c; --c3: #6b4fb3; --c4: #2a7d4f; --c5: #a3306a; --c6: #5b6779;
+  --scene-bg: #f7f9fc;
+  --scene-ink: #233247;
+  --star-a: #c26a00; --star-b: #2a6fb0;
+  --ray: #c9471f; --ray-2: #1b72a8; --ray-3: #2f8a3e;
+  --glass: rgba(80,140,200,.22);
+  --mirror: #51637d;
+  --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --r: 6px;
+  --shadow: 0 1px 2px rgba(19,32,51,.08), 0 4px 14px rgba(19,32,51,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #020617; --surface: #0a1122; --surface-2: #111a2e; --surface-3: #1b2540;
+    --ink: #e2e8f1; --ink-2: #a3b0c3; --ink-3: #7d8ba0; --line: #26344a;
+    --accent: #f0b456; --accent-ink: #1a1203; --data: #63c1e0;
+    --good: #5cc98a; --warn: #e6b545; --bad: #ff7b70;
+    --c1: #63c1e0; --c2: #f0a057; --c3: #b39cf2; --c4: #6fd398; --c5: #f07fb6; --c6: #9aa7ba;
+    --scene-bg: #01030a; --scene-ink: #c8d3e3;
+    --star-a: #ffc469; --star-b: #8cc4ff;
+    --ray: #ff8a5c; --ray-2: #6cc4ff; --ray-3: #7ddc85;
+    --glass: rgba(120,180,240,.20); --mirror: #9fb1ca;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #020617; --surface: #0a1122; --surface-2: #111a2e; --surface-3: #1b2540;
+  --ink: #e2e8f1; --ink-2: #a3b0c3; --ink-3: #7d8ba0; --line: #26344a;
+  --accent: #f0b456; --accent-ink: #1a1203; --data: #63c1e0;
+  --good: #5cc98a; --warn: #e6b545; --bad: #ff7b70;
+  --c1: #63c1e0; --c2: #f0a057; --c3: #b39cf2; --c4: #6fd398; --c5: #f07fb6; --c6: #9aa7ba;
+  --scene-bg: #01030a; --scene-ink: #c8d3e3;
+  --star-a: #ffc469; --star-b: #8cc4ff;
+  --ray: #ff8a5c; --ray-2: #6cc4ff; --ray-3: #7ddc85;
+  --glass: rgba(120,180,240,.20); --mirror: #9fb1ca;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 14px/1.5 var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+button, input, select, textarea { font: inherit; color: inherit; }
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.2; }
+h2 { font-size: 1.55rem; }
+h3 { font-size: 1.12rem; }
+h4 { font-size: .98rem; }
+p { margin: 0; }
+.num, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--ink-2); }
+.small { font-size: .86em; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+/* ---------- barra superior ---------- */
+.topbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding-block: 8px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: baseline; gap: 8px; background: none; border: 0; padding: 4px 0; cursor: pointer; }
+.brand b { font-family: var(--font-display); font-size: 1.15rem; letter-spacing: .01em; }
+.brand span { color: var(--ink-3); font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; }
+.labnav { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; min-width: 0; }
+@media (max-width: 700px) { .labnav { flex-wrap: nowrap; overflow-x: auto; order: 3; flex-basis: 100%; } .labnav button { white-space: nowrap; } }
+.labnav button {
+  border: 1px solid transparent; background: none; padding: 5px 10px; border-radius: var(--r); cursor: pointer; color: var(--ink-2);
+}
+.labnav button:hover { background: var(--surface-2); color: var(--ink); }
+.labnav button[aria-current="page"] { border-color: var(--line); background: var(--surface-2); color: var(--ink); font-weight: 600; }
+.labnav .k { font-family: var(--font-mono); color: var(--accent); margin-right: 4px; }
+
+/* ---------- botones y controles ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  padding: 6px 11px; border-radius: var(--r); cursor: pointer; line-height: 1.2; white-space: nowrap;
+}
+.btn:hover { background: var(--surface-2); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn.ghost { background: none; border-color: transparent; }
+.btn.small { padding: 3px 8px; font-size: .85rem; }
+.btn-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+select, input[type="number"], input[type="text"], textarea {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 4px 6px; min-width: 0;
+}
+textarea { width: 100%; font-family: var(--font-mono); font-size: .82rem; }
+input[type="range"] { width: 100%; accent-color: var(--accent); min-width: 0; }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
+
+/* ---------- inicio ---------- */
+.home { max-width: 1180px; margin: 0 auto; padding-block: 28px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 26px; }
+.home-intro { display: grid; gap: 10px; max-width: 70ch; }
+.home-intro h1 { font-size: clamp(1.7rem, 3.6vw, 2.5rem); }
+.home-intro .eyebrow { font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.card {
+  display: grid; grid-template-rows: auto 1fr auto; gap: 10px; text-align: left;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; cursor: pointer; box-shadow: var(--shadow);
+}
+.card:hover { border-color: var(--accent); }
+.card canvas { width: 100%; height: 140px; border-radius: 6px; background: var(--scene-bg); display: block; }
+.card .k { font-family: var(--font-mono); color: var(--accent); font-size: .8rem; letter-spacing: .06em; }
+.card h3 { margin-top: 2px; }
+.card p { color: var(--ink-2); font-size: .92rem; }
+.card .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag { font-size: .74rem; border: 1px solid var(--line); border-radius: 99px; padding: 1px 8px; color: var(--ink-2); }
+.home-notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.home-notes div { border-top: 2px solid var(--line); padding-top: 10px; color: var(--ink-2); font-size: .9rem; }
+.home-notes b { color: var(--ink); display: block; margin-bottom: 2px; }
+
+/* ---------- laboratorio ---------- */
+.lab { padding-block: 14px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 12px; max-width: 1680px; margin: 0 auto; }
+.lab-head { display: grid; gap: 8px; }
+.lab-title { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.lab-title .k { font-family: var(--font-mono); color: var(--accent); }
+.lab-lede { color: var(--ink-2); max-width: 90ch; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: .76rem; padding: 2px 9px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); }
+.chip .g { font-family: var(--font-mono); font-weight: 700; }
+.st-pass { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
+.st-review { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
+.st-fail { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+.st-none { color: var(--ink-3); }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 7px 12px; cursor: pointer; color: var(--ink-2); white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+
+.lab-grid { display: grid; grid-template-columns: 300px minmax(0, 1fr) 300px; gap: 12px; align-items: start; }
+@media (max-width: 1250px) { .lab-grid { grid-template-columns: 290px minmax(0, 1fr); } .lab-grid .readouts { grid-column: 1 / -1; } }
+@media (max-width: 820px) { .lab-grid { grid-template-columns: minmax(0, 1fr); } .lab-grid > * { grid-column: 1 / -1; } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-width: 0; }
+.controls { display: grid; gap: 10px; max-height: calc(100vh - 150px); overflow: auto; position: sticky; top: 64px; }
+@media (max-width: 820px) { .controls { max-height: none; position: static; } }
+.stage { display: grid; gap: 10px; min-width: 0; }
+.viewport { position: relative; background: var(--scene-bg); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.viewport canvas { display: block; width: 100%; height: clamp(300px, 58vh, 640px); touch-action: none; }
+.viewport .overlay-tl, .viewport .overlay-tr, .viewport .overlay-bl, .viewport .overlay-br { position: absolute; font-size: .78rem; color: var(--scene-ink); pointer-events: none; padding: 6px 9px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.overlay-tl { top: 0; left: 0; } .overlay-tr { top: 0; right: 0; text-align: right; } .overlay-bl { bottom: 0; left: 0; } .overlay-br { bottom: 0; right: 0; text-align: right; }
+.viewport .vbtns { position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; pointer-events: auto; }
+.playbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.playbar .clock { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink-2); margin-left: auto; font-size: .86rem; }
+.chart-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; }
+.chart-box { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px 4px; min-width: 0; display: grid; gap: 4px; }
+.chart-box .chart-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; }
+.chart-box .chart-head b { font-size: .86rem; font-weight: 600; }
+.chart-box canvas { width: 100%; height: 200px; display: block; }
+.chart-box.tall canvas { height: 260px; }
+.chart-note { font-size: .76rem; color: var(--ink-3); }
+
+/* grupos de parámetros */
+.pgroup { display: grid; gap: 7px; }
+.pgroup > summary { cursor: pointer; font-weight: 600; font-size: .9rem; list-style: none; display: flex; align-items: center; gap: 6px; }
+.pgroup > summary::before { content: "▸"; color: var(--ink-3); font-size: .8em; }
+.pgroup[open] > summary::before { content: "▾"; }
+.pgroup > summary::-webkit-details-marker { display: none; }
+.prow { display: grid; gap: 2px; }
+.prow .plabel { display: flex; align-items: center; gap: 6px; font-size: .85rem; color: var(--ink-2); }
+.prow .plabel .u { color: var(--ink-3); font-size: .8rem; }
+.prow .pinputs { display: grid; grid-template-columns: minmax(0, 1fr) 92px; gap: 8px; align-items: center; }
+.prow .pinputs input[type="number"] { width: 100%; font-family: var(--font-mono); font-size: .85rem; text-align: right; }
+.prow.check { display: flex; align-items: center; gap: 6px; font-size: .86rem; }
+.prow.check label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+.prow select { width: 100%; }
+.prow.disabled { opacity: .45; }
+.prow .pmsg { font-size: .74rem; color: var(--warn); }
+.help { border: 1px solid var(--line); background: var(--surface-2); border-radius: 50%; width: 17px; height: 17px; display: inline-grid; place-items: center; font-size: .68rem; cursor: pointer; color: var(--ink-2); padding: 0; flex: none; }
+.help:hover { color: var(--ink); border-color: var(--ink-3); }
+.helptext { font-size: .8rem; color: var(--ink-2); background: var(--surface-2); border-radius: 5px; padding: 6px 8px; }
+
+/* paneles de resultados */
+.readouts { display: grid; gap: 10px; }
+.rgroup { display: grid; gap: 4px; }
+.rgroup h4 { display: flex; align-items: center; gap: 8px; font-family: var(--font-body); font-size: .8rem; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); }
+.kind { font-family: var(--font-mono); font-size: .68rem; letter-spacing: .04em; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--line); text-transform: none; }
+.kind.in { color: var(--ink-2); }
+.kind.out { color: var(--data); border-color: color-mix(in srgb, var(--data) 50%, var(--line)); }
+.kind.model { color: var(--c3); border-color: color-mix(in srgb, var(--c3) 50%, var(--line)); }
+.kind.val { color: var(--good); border-color: color-mix(in srgb, var(--good) 50%, var(--line)); }
+.rrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: baseline; font-size: .86rem; padding: 2px 0; border-bottom: 1px dashed color-mix(in srgb, var(--line) 70%, transparent); }
+.rrow:last-child { border-bottom: 0; }
+.rrow .rl { color: var(--ink-2); min-width: 0; }
+.rrow .rv { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; color: var(--data); }
+.rrow .rv .u { color: var(--ink-3); margin-left: 3px; font-size: .9em; }
+.notes { display: grid; gap: 5px; font-size: .82rem; color: var(--ink-2); margin: 0; padding-left: 16px; }
+.msgs { display: grid; gap: 6px; }
+.msg { font-size: .83rem; padding: 6px 8px 6px 28px; border-radius: 5px; position: relative; background: var(--surface-2); border: 1px solid var(--line); }
+.msg::before { position: absolute; left: 8px; top: 5px; font-family: var(--font-mono); font-weight: 700; }
+.msg.ok::before { content: "✓"; color: var(--good); }
+.msg.warn::before { content: "!"; color: var(--warn); }
+.msg.bad::before { content: "✕"; color: var(--bad); }
+.msg.info::before { content: "i"; color: var(--data); }
+.msg.ok { border-color: color-mix(in srgb, var(--good) 40%, var(--line)); }
+.msg.warn { border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); }
+.msg.bad { border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); }
+.verdict { font-weight: 600; }
+
+/* gráficas y pruebas a pantalla completa */
+.wide-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 12px; }
+@media (max-width: 480px) { .wide-grid { grid-template-columns: minmax(0, 1fr); } }
+.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: .86rem; }
+.toolbar label { display: inline-flex; gap: 5px; align-items: center; }
+.toolbar input[type="number"] { width: 90px; }
+.table-wrap { overflow-x: auto; }
+table.tests { border-collapse: collapse; width: 100%; font-size: .84rem; }
+table.tests th, table.tests td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.tests th { font-size: .74rem; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); }
+table.tests td.detail { color: var(--ink-2); max-width: 60ch; }
+table.tests tr.level td { background: var(--surface-2); font-weight: 600; }
+.badge { display: inline-flex; gap: 4px; align-items: center; font-size: .76rem; padding: 1px 7px; border-radius: 4px; border: 1px solid var(--line); white-space: nowrap; }
+.log { font-family: var(--font-mono); font-size: .8rem; display: grid; gap: 3px; max-height: 60vh; overflow: auto; }
+.log .ev { display: grid; grid-template-columns: 120px 110px minmax(0, 1fr); gap: 8px; border-bottom: 1px dashed var(--line); padding: 3px 0; }
+@media (max-width: 600px) { .log .ev { grid-template-columns: minmax(0, 1fr); } }
+.log .ev .t { color: var(--ink-3); }
+.log .ev .k { color: var(--accent); }
+
+/* guía */
+.guide { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 900px) { .guide { grid-template-columns: minmax(0, 1fr); } }
+.guide .panel { display: grid; gap: 9px; }
+.guide p, .guide li { max-width: 72ch; }
+.guide ol, .guide ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.qcard { border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; display: grid; gap: 7px; background: var(--surface-2); }
+.qcard .opts { display: grid; gap: 4px; }
+.qcard .opts label { display: flex; gap: 7px; align-items: flex-start; cursor: pointer; font-size: .9rem; }
+.qcard .reveal { border-left: 3px solid var(--data); padding-left: 9px; font-size: .9rem; }
+.eq { font-family: var(--font-mono); background: var(--surface-2); padding: 6px 9px; border-radius: 5px; overflow-x: auto; white-space: nowrap; font-size: .86rem; }
+details.explain { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+details.explain > summary { cursor: pointer; padding: 7px 10px; font-weight: 600; font-size: .88rem; }
+details.explain > div { padding: 0 10px 10px; display: grid; gap: 6px; font-size: .88rem; color: var(--ink-2); }
+
+/* modal y avisos */
+.modal-back { position: fixed; inset: 0; background: rgba(5,10,18,.55); z-index: 50; display: grid; place-items: center; padding: 16px; }
+.modal { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; width: min(760px, 100%); max-height: 88vh; overflow: auto; padding: 16px; display: grid; gap: 10px; box-shadow: var(--shadow); }
+.modal.wide { width: min(1000px, 100%); }
+.modal header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.toasts { position: fixed; right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 60; display: grid; gap: 6px; max-width: min(420px, calc(100vw - 24px)); }
+.toast { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; box-shadow: var(--shadow); font-size: .86rem; }
+.alert-bar { border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--line)); background: color-mix(in srgb, var(--warn) 9%, var(--surface)); border-radius: 8px; padding: 10px 12px; display: grid; gap: 8px; }
+.alert-bar.bad { border-color: color-mix(in srgb, var(--bad) 55%, var(--line)); background: color-mix(in srgb, var(--bad) 8%, var(--surface)); }
+
+/* informe imprimible */
+.report { font-size: .92rem; display: grid; gap: 12px; }
+.report h1 { font-size: 1.6rem; }
+.report h2 { font-size: 1.25rem; margin-top: 8px; }
+.report table { border-collapse: collapse; width: 100%; font-size: .84rem; }
+.report td, .report th { border: 1px solid var(--line); padding: 4px 6px; text-align: left; }
+.report img { max-width: 100%; border: 1px solid var(--line); border-radius: 4px; }
+@media print {
+  body > *:not(.modal-back) { display: none !important; }
+  .modal-back { position: static; background: none; padding: 0; display: block; }
+  .modal { max-height: none; overflow: visible; box-shadow: none; border: 0; width: 100%; }
+  .modal .noprint { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+
+/* selector de nivel (Secundaria / Universidad) */
+.modesel { display: inline-flex; border: 1px solid var(--line); border-radius: 99px; padding: 3px; background: var(--surface-2); }
+.modesel button { border: 0; background: none; color: var(--ink-2); padding: 5px 14px; border-radius: 99px; cursor: pointer; font-weight: 600; }
+.modesel button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+
+table.tests.data th { text-transform: none; letter-spacing: 0; }
+/* cuerpo negro: espectro + emisor lado a lado */
+.bbview { display: grid; grid-template-columns: minmax(0, 1fr) 280px; }
+.bbview canvas.emit { border-left: 1px solid var(--line); }
+@media (max-width: 900px) { .bbview { grid-template-columns: minmax(0, 1fr); } .bbview canvas.emit { border-left: 0; border-top: 1px solid var(--line); height: 300px !important; } }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand" style="cursor:default"><b>Cuerpo negro</b><span>laboratorio virtual</span></div>
+  <div style="flex:1"></div>
+  <div class="modesel" id="modeSel" role="group" aria-label="Nivel">
+    <button type="button" data-mode="sec" aria-pressed="true">Secundaria</button>
+    <button type="button" data-mode="uni" aria-pressed="false">Universidad</button>
+  </div>
+</header>
+<main>
+  <div id="labs"></div>
+</main>
+<div id="modalRoot"></div>
+<div class="toasts" id="toastRoot" aria-live="polite"></div>
+<noscript><p style="padding:16px">Esta aplicación necesita JavaScript activado.</p></noscript>
+
+<script>
+'use strict';
+/* =====================================================================
+   NÚCLEO COMÚN
+   Utilidades numéricas, generador aleatorio reproducible, formato de
+   números en español, almacenamiento local, exportación/importación,
+   gráficas propias (Canvas 2D), paneles de parámetros, registro de
+   eventos y marco de pruebas con estados honestos.
+   ===================================================================== */
+(function () {
+const LAB = window.LAB = window.LAB || {};
+LAB.version = '1.0.0';
+LAB.experiments = {};
+
+/* ---------------------------- utilidades ---------------------------- */
+const U = LAB.U = {};
+U.clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+U.isNum = x => typeof x === 'number' && Number.isFinite(x);
+const SUP = { '-': '⁻', '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹' };
+U.sup = n => String(n).split('').map(c => SUP[c] || c).join('');
+function plain(x, sig) {
+  // Cifras significativas con coma decimal y sin separador de miles (evita ambigüedad).
+  let s = Number(x.toPrecision(sig)).toString();
+  if (s.includes('e')) s = Number(s).toFixed(Math.max(0, sig - 1));
+  return s.replace('.', ',').replace('-', '−');
+}
+/** Formatea un número para la interfaz (coma decimal, notación ×10ⁿ fuera de [1e-3, 1e6)). */
+U.fmt = function (x, sig = 4) {
+  if (x === null || x === undefined || Number.isNaN(x)) return '—';
+  if (x === Infinity) return '∞';
+  if (x === -Infinity) return '−∞';
+  if (x === 0) return '0';
+  const ax = Math.abs(x);
+  if (ax >= 1e-3 && ax < 1e6) return plain(x, sig);
+  let e = Math.floor(Math.log10(ax));
+  let m = Number((x / Math.pow(10, e)).toPrecision(sig));
+  if (Math.abs(m) >= 10) { m /= 10; e += 1; }
+  return plain(m, sig) + '×10' + U.sup(e);
+};
+U.fmtFixed = (x, d = 2) => (U.isNum(x) ? x.toFixed(d).replace('.', ',').replace('-', '−') : '—');
+U.mean = a => { let s = 0; for (const v of a) s += v; return a.length ? s / a.length : NaN; };
+U.std = a => { const m = U.mean(a); let s = 0; for (const v of a) s += (v - m) ** 2; return a.length > 1 ? Math.sqrt(s / (a.length - 1)) : NaN; };
+U.quantile = (a, q) => { if (!a.length) return NaN; const b = Array.from(a).sort((x, y) => x - y); const i = (b.length - 1) * q; const lo = Math.floor(i), hi = Math.ceil(i); return b[lo] + (b[hi] - b[lo]) * (i - lo); };
+U.median = a => U.quantile(a, 0.5);
+U.deg = Math.PI / 180;
+U.ARCSEC_PER_RAD = 180 * 3600 / Math.PI; // 206264.806…
+U.deepCopy = o => JSON.parse(JSON.stringify(o));
+U.uid = () => Math.random().toString(36).slice(2, 9);
+U.nowStamp = () => { const d = new Date(); const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; };
+U.sleep0 = () => new Promise(r => setTimeout(r, 0));
+U.esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* Generador pseudoaleatorio reproducible (mulberry32) + normal (Box–Muller). */
+U.rng = function (seed) {
+  let a = (seed >>> 0) || 1;
+  const next = function () {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  let spare = null;
+  next.gauss = function () {
+    if (spare !== null) { const s = spare; spare = null; return s; }
+    let u = 0, v = 0;
+    while (u <= 1e-300) u = next();
+    v = next();
+    const r = Math.sqrt(-2 * Math.log(u));
+    spare = r * Math.sin(2 * Math.PI * v);
+    return r * Math.cos(2 * Math.PI * v);
+  };
+  return next;
+};
+
+/* ------------------------------ DOM ------------------------------ */
+/** Crea un elemento: el('div.clase#id', {attr}, hijos...) */
+const el = LAB.el = function (spec, attrs, ...kids) {
+  const m = spec.match(/^([a-z0-9]+)?((?:[.#][\w-]+)*)$/i);
+  const node = document.createElement((m && m[1]) || 'div');
+  if (m && m[2]) for (const part of m[2].match(/[.#][\w-]+/g)) {
+    if (part[0] === '.') node.classList.add(part.slice(1)); else node.id = part.slice(1);
+  }
+  if (attrs && (typeof attrs !== 'object' || attrs instanceof Node || Array.isArray(attrs))) { kids.unshift(attrs); attrs = null; }
+  if (attrs) for (const [k, v] of Object.entries(attrs)) {
+    if (v === undefined || v === null || v === false) continue;
+    if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2), v);
+    else if (k === 'html') node.innerHTML = v;
+    else if (k === 'text') node.textContent = v;
+    else node.setAttribute(k, v === true ? '' : v);
+  }
+  for (const kid of kids.flat()) {
+    if (kid === null || kid === undefined || kid === false) continue;
+    node.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  return node;
+};
+
+/* Colores del tema leídos de las variables CSS (para dibujar en Canvas). */
+let themeCache = null;
+LAB.theme = function () {
+  if (themeCache) return themeCache;
+  const cs = getComputedStyle(document.documentElement);
+  const names = ['bg', 'surface', 'surface-2', 'surface-3', 'ink', 'ink-2', 'ink-3', 'line', 'accent', 'data', 'good', 'warn', 'bad', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'scene-bg', 'scene-ink', 'star-a', 'star-b', 'ray', 'ray-2', 'ray-3', 'glass', 'mirror'];
+  const t = {};
+  for (const n of names) t[n] = cs.getPropertyValue('--' + n).trim() || '#888';
+  t.mono = cs.getPropertyValue('--font-mono').trim();
+  t.body = cs.getPropertyValue('--font-body').trim();
+  themeCache = t;
+  return t;
+};
+LAB.invalidateTheme = () => { themeCache = null; };
+try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { themeCache = null; LAB.redrawAll && LAB.redrawAll(); }); } catch (e) { /* navegadores antiguos */ }
+
+/** Ajusta un canvas a su tamaño CSS y a la densidad de píxeles. Devuelve {ctx,w,h}. */
+LAB.fitCanvas = function (canvas) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.max(10, canvas.clientWidth), h = Math.max(10, canvas.clientHeight);
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.setLineDash([]); ctx.globalAlpha = 1;
+  return { ctx, w, h };
+};
+
+/* ------------------------- almacenamiento ------------------------- */
+const PREFIX = 'cuerponegro.v1.';
+LAB.store = {
+  get(key, fallback = null) { try { const s = localStorage.getItem(PREFIX + key); return s === null ? fallback : JSON.parse(s); } catch (e) { return fallback; } },
+  set(key, val) { try { localStorage.setItem(PREFIX + key, JSON.stringify(val)); return true; } catch (e) { return false; } },
+  del(key) { try { localStorage.removeItem(PREFIX + key); } catch (e) { /* sin almacenamiento */ } },
+  available() { try { localStorage.setItem(PREFIX + '_t', '1'); localStorage.removeItem(PREFIX + '_t'); return true; } catch (e) { return false; } }
+};
+
+/* ------------------------- avisos y modales ------------------------- */
+LAB.toast = function (text, ms = 3200) {
+  const root = document.getElementById('toastRoot');
+  if (!root) return;
+  const t = el('div.toast', { role: 'status' }, text);
+  root.append(t);
+  setTimeout(() => t.remove(), ms);
+};
+LAB.modal = function (title, body, { wide = false, onClose } = {}) {
+  const root = document.getElementById('modalRoot');
+  const close = () => { back.remove(); document.removeEventListener('keydown', onKey); onClose && onClose(); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  const closeBtn = el('button.btn.small.noprint', { type: 'button', onclick: close }, 'Cerrar');
+  const box = el('div.modal' + (wide ? '.wide' : ''), { role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
+    el('header', el('h3', title), closeBtn), body);
+  const back = el('div.modal-back', { onclick: e => { if (e.target === back) close(); } }, box);
+  root.append(back);
+  document.addEventListener('keydown', onKey);
+  closeBtn.focus();
+  return { close, box };
+};
+
+/* -------------------- exportación e importación -------------------- */
+LAB.io = {
+  /** Intenta descargar; además muestra el contenido para copiarlo (vistas incrustadas bloquean descargas). */
+  exportText(filename, text, mime = 'application/json', title = 'Exportar') {
+    const ta = el('textarea', { rows: 14, readonly: true, 'aria-label': 'Contenido exportado' });
+    ta.value = text;
+    const dl = () => {
+      try {
+        const blob = new Blob([text], { type: mime + ';charset=utf-8' });
+        const a = el('a', { href: URL.createObjectURL(blob), download: filename });
+        document.body.append(a); a.click();
+        setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+        LAB.toast('Descarga solicitada: ' + filename + '. Si no aparece, copie el contenido.');
+      } catch (e) { LAB.toast('La descarga no está disponible aquí; copie el contenido.'); }
+    };
+    const copy = () => {
+      const fallback = () => { ta.focus(); ta.select(); LAB.toast('Texto seleccionado: use Ctrl+C / Cmd+C.'); };
+      try { navigator.clipboard.writeText(text).then(() => LAB.toast('Copiado al portapapeles.'), fallback); } catch (e) { fallback(); }
+    };
+    LAB.modal(title, el('div', { style: 'display:grid;gap:8px' },
+      el('p.small.muted', `Archivo: ${filename} (${(text.length / 1024).toFixed(1).replace('.', ',')} kB). Si la descarga está bloqueada en esta vista, copie el texto y guárdelo con ese nombre.`),
+      el('div.btn-row', el('button.btn.primary', { type: 'button', onclick: dl }, 'Descargar archivo'), el('button.btn', { type: 'button', onclick: copy }, 'Copiar')),
+      ta));
+  },
+  /** Diálogo de importación: archivo o texto pegado. callback(text) debe lanzar error si no es válido. */
+  importText(title, accept, callback) {
+    const ta = el('textarea', { rows: 10, placeholder: 'Pegue aquí el contenido JSON…', 'aria-label': 'Contenido a importar' });
+    const file = el('input', { type: 'file', accept });
+    const msg = el('p.small');
+    let m;
+    const go = text => {
+      try { callback(text); m.close(); LAB.toast('Configuración cargada.'); } catch (e) { msg.textContent = 'No se pudo cargar: ' + e.message; msg.style.color = 'var(--bad)'; }
+    };
+    file.addEventListener('change', () => { const f = file.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => go(String(r.result)); r.readAsText(f); });
+    m = LAB.modal(title, el('div', { style: 'display:grid;gap:8px' }, el('label.small', 'Archivo: ', file), ta,
+      el('div.btn-row', el('button.btn.primary', { type: 'button', onclick: () => go(ta.value) }, 'Cargar texto pegado')), msg));
+  },
+  toCSV(columns, rows) {
+    const esc = v => (typeof v === 'number' ? (Number.isFinite(v) ? String(v) : '') : '"' + String(v).replace(/"/g, '""') + '"');
+    return columns.map(esc).join(',') + '\n' + rows.map(r => r.map(esc).join(',')).join('\n') + '\n';
+  }
+};
+
+/* -------------------------- registro de eventos -------------------------- */
+class EventLog {
+  constructor() { this.items = []; this.listeners = []; }
+  add(kind, text, data) {
+    const ev = { wall: U.nowStamp(), kind, text, data: data === undefined ? null : data };
+    this.items.push(ev);
+    if (this.items.length > 2000) this.items.shift();
+    this.listeners.forEach(f => f(ev));
+    return ev;
+  }
+  onAdd(f) { this.listeners.push(f); }
+  clear() { this.items = []; this.listeners.forEach(f => f(null)); }
+}
+LAB.EventLog = EventLog;
+
+/* ------------------------------- gráficas ------------------------------- */
+function niceStep(range, count) {
+  const raw = range / Math.max(1, count);
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const f = raw / p;
+  return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p;
+}
+function ticks(min, max, count) {
+  if (!(max > min)) return [min];
+  const st = niceStep(max - min, count);
+  const out = [];
+  for (let v = Math.ceil(min / st) * st; v <= max + st * 1e-9; v += st) out.push(Math.abs(v) < st * 1e-9 ? 0 : v);
+  return out;
+}
+/**
+ * Gráfica de líneas en Canvas 2D. Cada serie: {label, x:[], y:[], color:'c1', dash:[], na:'motivo'}.
+ * Opciones: xLabel, yLabel, yLog (usa |y|, marca los valores no positivos como ausentes),
+ * xRange:[min,max] (ventana temporal), yZero (incluir cero), empty (texto cuando no hay datos).
+ */
+class Chart {
+  constructor(canvas, opts = {}) {
+    this.canvas = canvas; this.opts = opts; this.series = []; this.hoverX = null;
+    canvas.setAttribute('role', 'img');
+    canvas.setAttribute('aria-label', opts.title || opts.yLabel || 'Gráfica');
+    canvas.addEventListener('mousemove', e => { const r = canvas.getBoundingClientRect(); this.hoverX = e.clientX - r.left; this.draw(); });
+    canvas.addEventListener('mouseleave', () => { this.hoverX = null; this.draw(); });
+  }
+  set(series, opts) { this.series = series || []; if (opts) Object.assign(this.opts, opts); this.draw(); }
+  draw() {
+    const c = this.canvas;
+    if (!c.isConnected || c.clientWidth === 0) return;
+    const { ctx, w, h } = LAB.fitCanvas(c);
+    const T = LAB.theme(), o = this.opts;
+    ctx.clearRect(0, 0, w, h);
+    ctx.font = `11px ${T.body}`; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.setLineDash([]); ctx.globalAlpha = 1;
+    const L = 60, R = 10, TOP = 8 + 16 * Math.ceil(this.series.length / Math.max(1, Math.floor((w - L) / 150))), B = 32;
+    const pw = w - L - R, ph = h - TOP - B;
+    if (pw < 40 || ph < 30) return;
+    const yT = v => (o.yLog ? (v > 0 ? Math.log10(v) : NaN) : v);
+    const yv = v => (o.yLog ? Math.abs(v) : v);
+    // rangos
+    let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity, any = false;
+    for (const s of this.series) {
+      if (s.na || !s.x) continue;
+      for (let i = 0; i < s.x.length; i++) {
+        const x = s.x[i]; if (!Number.isFinite(x)) continue;
+        if (o.xRange && (x < o.xRange[0] || x > o.xRange[1])) continue;
+        const y = yT(yv(s.y[i])); if (!Number.isFinite(y)) continue;
+        any = true;
+        if (x < xmin) xmin = x; if (x > xmax) xmax = x; if (y < ymin) ymin = y; if (y > ymax) ymax = y;
+      }
+    }
+    if (o.xRange) { xmin = o.xRange[0]; xmax = o.xRange[1]; }
+    ctx.strokeStyle = T.line; ctx.lineWidth = 1; ctx.strokeRect(L + .5, TOP + .5, pw, ph);
+    // leyenda (con muestra de trazo: el color no es la única pista)
+    ctx.textAlign = 'left';
+    let lx = L, ly = 4;
+    for (const s of this.series) {
+      const col = T[s.color] || s.color || T.c1;
+      const label = s.label + (s.na ? ' (' + s.na + ')' : '');
+      const tw = ctx.measureText(label).width + 30;
+      if (lx + tw > w - R && lx > L) { lx = L; ly += 16; }
+      ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.setLineDash(s.dash || []);
+      ctx.beginPath(); ctx.moveTo(lx, ly + 7); ctx.lineTo(lx + 20, ly + 7); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = s.na ? T['ink-3'] : T['ink-2']; ctx.textBaseline = 'middle'; ctx.fillText(label, lx + 24, ly + 7);
+      lx += tw + 8;
+    }
+    if (!any) {
+      ctx.fillStyle = T['ink-3']; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(o.empty || 'Sin datos todavía: inicie la simulación', L + pw / 2, TOP + ph / 2); ctx.textAlign = 'left';
+      this._layout = null; return;
+    }
+    if (o.yZero && !o.yLog) { ymin = Math.min(ymin, 0); ymax = Math.max(ymax, 0); }
+    if (ymax - ymin <= 1e-9 * Math.max(Math.abs(ymax), Math.abs(ymin))) { ymin = ymax = (ymax + ymin) / 2; }
+    if (ymax === ymin) { const d = Math.abs(ymax) * 0.05 || (o.yLog ? 0.5 : 1); ymin -= d; ymax += d; }
+    else { const pad = (ymax - ymin) * 0.06; ymin -= pad; ymax += pad; }
+    if (xmax === xmin) { xmax = xmin + 1; }
+    const X = x => L + (x - xmin) / (xmax - xmin) * pw;
+    const Y = y => TOP + ph - (y - ymin) / (ymax - ymin) * ph;
+    // rejilla y marcas
+    ctx.fillStyle = T['ink-2']; ctx.strokeStyle = T.line; ctx.lineWidth = 1; ctx.globalAlpha = 1;
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    const yt = o.yLog ? ticks(Math.floor(ymin), Math.ceil(ymax), 6).filter(v => Number.isInteger(Math.round(v * 1e6) / 1e6)) : ticks(ymin, ymax, 5);
+    for (const v of yt) {
+      if (v < ymin || v > ymax) continue;
+      const py = Y(v);
+      ctx.globalAlpha = .55; ctx.beginPath(); ctx.moveTo(L, py + .5); ctx.lineTo(L + pw, py + .5); ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.fillText(o.yLog ? '10' + U.sup(Math.round(v)) : U.fmt(v, 3), L - 5, py);
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (const v of ticks(xmin, xmax, Math.max(2, Math.floor(pw / 80)))) {
+      const px = X(v);
+      ctx.globalAlpha = .55; ctx.beginPath(); ctx.moveTo(px + .5, TOP); ctx.lineTo(px + .5, TOP + ph); ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.fillText(U.fmt(v, 3), px, TOP + ph + 4);
+    }
+    ctx.fillStyle = T['ink-2']; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+    ctx.fillText(o.xLabel || '', L + pw, h - 1);
+    ctx.save(); ctx.translate(11, TOP + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText((o.yLabel || '') + (o.yLog ? ' (escala log, |valor|)' : ''), 0, 0); ctx.restore();
+    // cero
+    if (!o.yLog && ymin < 0 && ymax > 0) { ctx.strokeStyle = T['ink-3']; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(L, Y(0)); ctx.lineTo(L + pw, Y(0)); ctx.stroke(); ctx.setLineDash([]); }
+    // series
+    ctx.save(); ctx.beginPath(); ctx.rect(L, TOP, pw, ph); ctx.clip();
+    for (const s of this.series) {
+      if (s.na || !s.x) continue;
+      ctx.strokeStyle = T[s.color] || s.color || T.c1; ctx.lineWidth = s.width || 1.6; ctx.setLineDash(s.dash || []);
+      ctx.beginPath(); let pen = false;
+      const n = s.x.length, stride = Math.max(1, Math.floor(n / (pw * 2)));
+      for (let i = 0; i < n; i += (i + stride < n ? stride : Math.max(1, n - 1 - i))) {
+        const x = s.x[i], y = yT(yv(s.y[i]));
+        if (!Number.isFinite(x) || !Number.isFinite(y) || (o.xRange && (x < xmin || x > xmax))) { pen = false; if (i === n - 1) break; continue; }
+        const px = X(x), py = Y(y);
+        if (pen) ctx.lineTo(px, py); else { ctx.moveTo(px, py); pen = true; }
+        if (i === n - 1) break;
+      }
+      ctx.stroke(); ctx.setLineDash([]);
+      if (s.points) { ctx.fillStyle = ctx.strokeStyle; for (let i = 0; i < n; i++) { const y = yT(yv(s.y[i])); if (Number.isFinite(y)) { ctx.beginPath(); ctx.arc(X(s.x[i]), Y(y), 2.5, 0, 7); ctx.fill(); } } }
+    }
+    ctx.restore();
+    this._layout = { X, Y, xmin, xmax, L, pw, TOP, ph };
+    // lectura bajo el cursor
+    if (this.hoverX !== null && this.hoverX >= L && this.hoverX <= L + pw) {
+      const xv = xmin + (this.hoverX - L) / pw * (xmax - xmin);
+      ctx.strokeStyle = T['ink-3']; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(this.hoverX, TOP); ctx.lineTo(this.hoverX, TOP + ph); ctx.stroke(); ctx.setLineDash([]);
+      const lines = [(o.xLabel || 'x') + ': ' + U.fmt(xv, 4)];
+      for (const s of this.series) {
+        if (s.na || !s.x || !s.x.length) continue;
+        let lo = 0, hi = s.x.length - 1;
+        while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (s.x[mid] < xv) lo = mid; else hi = mid; }
+        const i = Math.abs(s.x[lo] - xv) < Math.abs(s.x[hi] - xv) ? lo : hi;
+        lines.push(s.label + ': ' + U.fmt(s.y[i], 5));
+      }
+      ctx.font = `11px ${T.mono}`;
+      const bw = Math.max(...lines.map(t => ctx.measureText(t).width)) + 12, bh = lines.length * 14 + 6;
+      let bx = this.hoverX + 8; if (bx + bw > w - 2) bx = this.hoverX - bw - 8;
+      ctx.fillStyle = T.surface; ctx.globalAlpha = .93; ctx.fillRect(bx, TOP + 4, bw, bh); ctx.globalAlpha = 1;
+      ctx.strokeStyle = T.line; ctx.strokeRect(bx + .5, TOP + 4.5, bw, bh);
+      ctx.fillStyle = T.ink; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      lines.forEach((t, k) => ctx.fillText(t, bx + 6, TOP + 8 + k * 14));
+    }
+  }
+}
+LAB.Chart = Chart;
+
+/** Caja de gráfica con título y nota. Devuelve {box, chart}. */
+LAB.chartBox = function (title, opts = {}, note) {
+  const cv = el('canvas');
+  const box = el('div.chart-box' + (opts.tall ? '.tall' : ''), el('div.chart-head', el('b', title), opts.headExtra || null), cv, note ? el('div.chart-note', note) : null);
+  const chart = new Chart(cv, Object.assign({ title }, opts));
+  return { box, chart };
+};
+
+/* --------------------------- paneles de parámetros --------------------------- */
+/**
+ * Construye un panel de parámetros desde un esquema:
+ * [{group, open, items:[{key, label, unit, type:'num'|'select'|'check', min, max, step, def, log, options:[[v,txt]], help, when:(vals)=>bool}]}]
+ * El valor numérico se valida: fuera de rango se recorta y se informa.
+ */
+class ParamPanel {
+  constructor(schema, onChange) {
+    this.schema = schema; this.onChange = onChange; this.values = {}; this.rows = {};
+    this.root = el('div', { style: 'display:grid;gap:10px' });
+    for (const g of schema) {
+      const det = el('details.pgroup', { open: g.open !== false });
+      det.append(el('summary', g.group));
+      for (const it of g.items) { this.values[it.key] = it.def; det.append(this._row(it)); }
+      this.root.append(det);
+    }
+    this.refreshVisibility();
+  }
+  _row(it) {
+    const helpBtn = it.help ? el('button.help', { type: 'button', title: 'Ayuda', 'aria-label': 'Ayuda sobre ' + it.label }, '?') : null;
+    const helpTxt = it.help ? el('div.helptext', { hidden: true }, it.help) : null;
+    if (helpBtn) helpBtn.addEventListener('click', () => { helpTxt.hidden = !helpTxt.hidden; });
+    const id = 'p-' + U.uid();
+    let row, setUI;
+    if (it.type === 'check') {
+      const cb = el('input', { type: 'checkbox', id });
+      cb.checked = !!it.def;
+      cb.addEventListener('change', () => this._set(it, cb.checked));
+      row = el('div.prow.check', el('label', { for: id }, cb, it.label), helpBtn, helpTxt);
+      setUI = v => { cb.checked = !!v; };
+    } else if (it.type === 'select') {
+      const sel = el('select', { id }, it.options.map(([v, t]) => el('option', { value: v }, t)));
+      sel.value = it.def;
+      sel.addEventListener('change', () => this._set(it, sel.value));
+      row = el('div.prow', el('div.plabel', el('label', { for: id }, it.label), helpBtn), sel, helpTxt);
+      setUI = v => { sel.value = v; };
+    } else {
+      const toS = v => (it.log ? Math.log10(v) : v), fromS = s => (it.log ? Math.pow(10, s) : s);
+      const rng = el('input', { type: 'range', min: toS(it.min), max: toS(it.max), step: it.log ? 'any' : (it.step || 'any'), 'aria-label': it.label + ' (deslizador)' });
+      const num = el('input', { type: 'number', id, min: it.min, max: it.max, step: it.step || 'any' });
+      const msg = el('div.pmsg', { hidden: true });
+      rng.addEventListener('input', () => { let v = fromS(parseFloat(rng.value)); v = it.step && !it.log ? Math.round(v / it.step) * it.step : Number(v.toPrecision(4)); num.value = v; this._set(it, v); });
+      num.addEventListener('change', () => {
+        let v = parseFloat(String(num.value).replace(',', '.'));
+        if (!Number.isFinite(v)) { msg.hidden = false; msg.textContent = 'Valor no numérico: se mantiene ' + this.values[it.key]; num.value = this.values[it.key]; return; }
+        if (v < it.min || v > it.max) { msg.hidden = false; msg.textContent = `Fuera del rango permitido [${it.min}, ${it.max}]: se ajustó.`; v = U.clamp(v, it.min, it.max); } else msg.hidden = true;
+        num.value = v; rng.value = toS(v); this._set(it, v);
+      });
+      row = el('div.prow', el('div.plabel', el('label', { for: id }, it.label), it.unit ? el('span.u', '[' + it.unit + ']') : null, helpBtn), el('div.pinputs', rng, num), msg, helpTxt);
+      setUI = v => { num.value = v; rng.value = toS(v); };
+    }
+    setUI(it.def);
+    this.rows[it.key] = { row, setUI, it };
+    return row;
+  }
+  _set(it, v) { this.values[it.key] = v; this.refreshVisibility(); this.onChange && this.onChange(it.key, v, this.values); }
+  refreshVisibility() { for (const k in this.rows) { const r = this.rows[k]; if (r.it.when) r.row.hidden = !r.it.when(this.values); } }
+  get(k) { return this.values[k]; }
+  /** Asigna valores (sin disparar onChange para cada uno). Ignora claves desconocidas. */
+  setValues(vals, silent = true) {
+    for (const [k, v] of Object.entries(vals || {})) {
+      const r = this.rows[k]; if (!r) continue;
+      let val = v;
+      if (r.it.type !== 'check' && r.it.type !== 'select') { val = Number(v); if (!Number.isFinite(val)) continue; val = U.clamp(val, r.it.min, r.it.max); }
+      if (r.it.type === 'select' && !r.it.options.some(o => String(o[0]) === String(v))) continue;
+      this.values[k] = val; r.setUI(val);
+    }
+    this.refreshVisibility();
+    if (!silent && this.onChange) this.onChange(null, null, this.values);
+  }
+  defaults() { const d = {}; for (const g of this.schema) for (const it of g.items) d[it.key] = it.def; return d; }
+  setDisabled(key, disabled, reason) { const r = this.rows[key]; if (!r) return; r.row.classList.toggle('disabled', !!disabled); r.row.querySelectorAll('input,select').forEach(i => { i.disabled = !!disabled; }); r.row.title = disabled ? (reason || '') : ''; }
+}
+LAB.ParamPanel = ParamPanel;
+
+/* ------------------------- paneles de lectura ------------------------- */
+/** Grupo de resultados: kind = 'in' | 'out' | 'model' | 'val'. */
+LAB.readoutGroup = function (title, kind) {
+  const KIND = { in: 'ENTRADA', out: 'CALCULADO', model: 'MODELO', val: 'VALIDACIÓN' };
+  const body = el('div');
+  const g = el('div.rgroup', el('h4', title, el('span.kind.' + kind, KIND[kind])), body);
+  const rows = {};
+  return {
+    el: g, body,
+    row(key, label, unit, help) {
+      const v = el('span.v', '—');
+      const r = el('div.rrow', { title: help || '' }, el('span.rl', label), el('span.rv', v, unit ? el('span.u', unit) : null));
+      body.append(r); rows[key] = v; return v;
+    },
+    set(key, text) { if (rows[key]) rows[key].textContent = text; },
+    rows
+  };
+};
+LAB.setMsgs = function (container, msgs) {
+  container.replaceChildren(...msgs.map(m => el('div.msg.' + m[0], m[1])));
+};
+
+/* ------------------------------ pruebas ------------------------------ */
+/*
+ * Cada prueba devuelve {status:'pass'|'review'|'fail', detail, tol}. Estados mostrados:
+ *  pass → «validado dentro de tolerancia», review → «requiere revisión»,
+ *  fail → «prueba fallida», sin ejecutar → «no evaluado». Una excepción = fallo.
+ */
+const STATUS = { pass: 'validado dentro de tolerancia', review: 'requiere revisión', fail: 'prueba fallida', none: 'no evaluado' };
+const GLYPH = { pass: '✓', review: '!', fail: '✕', none: '–' };
+LAB.STATUS = STATUS; LAB.GLYPH = GLYPH;
+const Tests = LAB.Tests = {
+  list: [], results: {}, listeners: [],
+  register(exp, level, id, name, fn, tol) { this.list.push({ exp, level, id: exp + '.' + id, name, fn, tol: tol || '' }); },
+  forExp(exp) { return this.list.filter(t => t.exp === exp); },
+  levels(exp) { return [...new Set(this.forExp(exp).map(t => t.level))]; },
+  async run(filter, onProgress) {
+    const sel = this.list.filter(filter);
+    for (const t of sel) {
+      const t0 = performance.now();
+      let r;
+      try { r = await t.fn(); if (!r || !STATUS[r.status]) r = { status: 'fail', detail: 'La prueba no devolvió un estado válido.' }; }
+      catch (e) { r = { status: 'fail', detail: 'Excepción: ' + (e && e.message ? e.message : e) }; }
+      r.ms = performance.now() - t0; r.at = U.nowStamp();
+      this.results[t.id] = r;
+      onProgress && onProgress(t, r);
+      this.listeners.forEach(f => f(t, r));
+      await U.sleep0();
+    }
+  },
+  summary(exp, level) {
+    const ts = this.forExp(exp).filter(t => !level || t.level === level);
+    const c = { pass: 0, review: 0, fail: 0, none: 0, total: ts.length };
+    for (const t of ts) { const r = this.results[t.id]; c[r ? r.status : 'none']++; }
+    // Un nivel solo es «validado» si TODAS sus pruebas se ejecutaron y pasaron.
+    c.status = c.fail ? 'fail' : c.review ? 'review' : c.none ? 'none' : 'pass';
+    return c;
+  },
+  onResult(f) { this.listeners.push(f); },
+  /** Resultado serializable para el informe. */
+  dump(exp) {
+    return this.forExp(exp).map(t => { const r = this.results[t.id]; return { id: t.id, nivel: t.level, nombre: t.name, tolerancia: t.tol, estado: r ? STATUS[r.status] : STATUS.none, detalle: r ? r.detail : '', ms: r ? Math.round(r.ms) : null, ejecutada: r ? r.at : null }; });
+  }
+};
+/** Ayudante: compara |valor−ref| ≤ tol. */
+LAB.near = (v, ref, tol) => Number.isFinite(v) && Math.abs(v - ref) <= tol;
+LAB.res = (ok, detail, reviewIf) => ({ status: ok ? 'pass' : (reviewIf ? 'review' : 'fail'), detail });
+
+/** Panel de pruebas de un experimento. */
+LAB.testPanel = function (exp, intro) {
+  const tbody = el('tbody');
+  const progress = el('span.small.muted');
+  const render = () => {
+    tbody.replaceChildren();
+    for (const level of Tests.levels(exp)) {
+      const s = Tests.summary(exp, level);
+      tbody.append(el('tr.level', el('td', { colspan: 5 }, level + ' — ', el('span.badge.st-' + s.status, GLYPH[s.status] + ' ' + STATUS[s.status]), ` (${s.pass} validadas, ${s.review} a revisar, ${s.fail} fallidas, ${s.none} sin evaluar)`)));
+      for (const t of Tests.forExp(exp).filter(x => x.level === level)) {
+        const r = Tests.results[t.id], st = r ? r.status : 'none';
+        tbody.append(el('tr', el('td', t.name), el('td', el('span.badge.st-' + st, GLYPH[st] + ' ' + STATUS[st])), el('td.detail', r ? r.detail : '—'), el('td.small.muted', t.tol || '—'), el('td.num.small', r ? Math.round(r.ms) + ' ms' : '—')));
+      }
+    }
+  };
+  const runBtn = el('button.btn.primary', { type: 'button' }, 'Ejecutar todas las pruebas');
+  const levelSel = el('select', { 'aria-label': 'Nivel de pruebas' }, el('option', { value: '' }, 'Todos los niveles'), Tests.levels(exp).map(l => el('option', { value: l }, l)));
+  runBtn.addEventListener('click', async () => {
+    runBtn.disabled = true; let k = 0;
+    const lv = levelSel.value;
+    const total = Tests.forExp(exp).filter(t => !lv || t.level === lv).length;
+    await Tests.run(t => t.exp === exp && (!lv || t.level === lv), t => { k++; progress.textContent = `Ejecutada ${k}/${total}: ${t.name}`; render(); });
+    progress.textContent = `Pruebas terminadas (${U.nowStamp()}).`;
+    runBtn.disabled = false; render();
+  });
+  const exportBtn = el('button.btn', { type: 'button', onclick: () => LAB.io.exportText(`pruebas_${exp}.json`, JSON.stringify({ app: 'Laboratorio de cuerpo negro', version: LAB.version, experimento: exp, fecha: U.nowStamp(), navegador: navigator.userAgent, resultados: Tests.dump(exp) }, null, 2), 'application/json', 'Exportar resultados de pruebas') }, 'Exportar resultados (JSON)');
+  Tests.onResult(t => { if (t.exp === exp) render(); });
+  render();
+  return el('div', { style: 'display:grid;gap:10px' },
+    el('div.panel', { style: 'display:grid;gap:8px' }, intro ? el('p.small.muted', intro) : null,
+      el('p.small.muted', 'Estados posibles: «validado dentro de tolerancia», «requiere revisión», «prueba fallida» y «no evaluado». Una prueba que no se ha ejecutado nunca aparece como superada. Las pruebas se ejecutan en este navegador con el mismo código que usa el laboratorio.'),
+      el('div.btn-row', runBtn, levelSel, exportBtn, progress)),
+    el('div.panel.table-wrap', el('table.tests', el('thead', el('tr', el('th', 'Prueba'), el('th', 'Estado'), el('th', 'Resultado observado'), el('th', 'Tolerancia'), el('th', 'Tiempo'))), tbody)));
+};
+
+/* --------------------------- guía pedagógica --------------------------- */
+/**
+ * Guía: objetivo, explicación, escenario de referencia, predicción previa,
+ * preguntas (respuesta oculta hasta responder o pedirla), conclusión basada en datos y desafíos.
+ */
+LAB.guidePanel = function (exp, g) {
+  const left = el('div.panel', el('h3', 'Objetivo de aprendizaje'), el('p', g.objective), el('h4', 'Explicación breve'), el('div', { html: g.intro }),
+    g.refScenario ? el('div.btn-row', el('button.btn', { type: 'button', onclick: () => { exp.loadScenario(g.refScenario); exp.showTab('lab'); } }, 'Cargar escenario de referencia')) : null,
+    g.equations ? el('details.explain', el('summary', 'Ecuaciones y convenciones del modelo'), el('div', { html: g.equations })) : null,
+    g.limits ? el('details.explain', el('summary', 'Límites del modelo'), el('div', { html: g.limits })) : null);
+  const right = el('div.panel', el('h3', 'Predecir, observar, explicar'));
+  // predicción
+  for (const q of g.questions) {
+    const name = 'q' + U.uid();
+    const reveal = el('div.reveal', { hidden: true, html: q.explain });
+    const fb = el('div.small');
+    const opts = el('div.opts', q.options.map((t, i) => el('label', el('input', { type: 'radio', name, value: i }), el('span', t))));
+    const check = el('button.btn.small', { type: 'button' }, q.kind === 'predict' ? 'Registrar mi predicción' : 'Comprobar');
+    const show = el('button.btn.small.ghost', { type: 'button' }, 'Ver explicación');
+    check.addEventListener('click', () => {
+      const s = opts.querySelector('input:checked');
+      if (!s) { fb.textContent = 'Elija una opción primero.'; return; }
+      const i = +s.value;
+      opts.querySelectorAll('input').forEach(x => { x.disabled = true; });
+      exp.log.add('guía', (q.kind === 'predict' ? 'Predicción registrada: ' : 'Respuesta: ') + q.options[i]);
+      if (q.kind === 'predict') fb.textContent = 'Predicción registrada. ' + (q.after || 'Ejecute la simulación y compare con los resultados; luego abra la explicación.');
+      else { fb.textContent = i === q.answer ? 'Correcto.' : 'No es la respuesta esperada; revise la explicación.'; reveal.hidden = false; }
+      check.disabled = true;
+    });
+    show.addEventListener('click', () => { reveal.hidden = false; });
+    right.append(el('div.qcard', el('b', (q.kind === 'predict' ? 'Predicción · ' : 'Pregunta · ') + q.title), el('p', q.text), opts, el('div.btn-row', check, show, q.scenario ? el('button.btn.small', { type: 'button', onclick: () => { exp.loadScenario(q.scenario); exp.showTab('lab'); } }, 'Ir al escenario') : null), fb, reveal));
+  }
+  // conclusión basada en datos
+  const concl = el('div.reveal', { hidden: true });
+  right.append(el('div.qcard', el('b', 'Conclusión basada en esta ejecución'),
+    el('p.small.muted', 'Se redacta solo con valores calculados en la sesión actual. Si no hay datos suficientes, se indica.'),
+    el('div.btn-row', el('button.btn.small', { type: 'button', onclick: () => { concl.hidden = false; concl.innerHTML = g.conclude(); } }, 'Generar conclusión')), concl));
+  // desafíos
+  if (g.challenges) for (const c of g.challenges) {
+    const out = el('div.small');
+    right.append(el('div.qcard', el('b', 'Desafío · ' + c.title), el('p', c.text),
+      el('textarea', { rows: 2, placeholder: 'Justifique su resultado aquí (queda solo en esta página)…', 'aria-label': 'Justificación del desafío' }),
+      el('div.btn-row', el('button.btn.small', { type: 'button', onclick: () => { const r = c.check(); out.textContent = r.text; out.style.color = r.ok ? 'var(--good)' : 'var(--warn)'; exp.log.add('desafío', c.title + ': ' + r.text); } }, 'Comprobar con los datos actuales')), out));
+  }
+  return el('div.guide', left, right);
+};
+
+/* ------------------------------ informe ------------------------------ */
+LAB.openReport = function (title, html) {
+  const doc = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${U.esc(title)}</title><style>body{font:14px/1.5 system-ui,sans-serif;max-width:900px;margin:24px auto;padding:0 16px;color:#132033}h1,h2{font-family:Georgia,serif}table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid #c9d3e0;padding:4px 6px;text-align:left}img{max-width:100%;border:1px solid #c9d3e0}.muted{color:#48586f}</style></head><body>${html}</body></html>`;
+  const body = el('div.report', { html });
+  const bar = el('div.btn-row.noprint',
+    el('button.btn.primary', { type: 'button', onclick: () => { try { window.print(); } catch (e) { LAB.toast('La impresión no está disponible en esta vista.'); } } }, 'Imprimir / Guardar como PDF'),
+    el('button.btn', { type: 'button', onclick: () => LAB.io.exportText(title.replace(/\s+/g, '_') + '.html', doc, 'text/html', 'Exportar informe HTML') }, 'Exportar HTML del informe'),
+    el('span.small.muted', 'No se genera un PDF dentro de la aplicación: use «Imprimir → Guardar como PDF» del navegador. Si el diálogo no se abre (vistas incrustadas), exporte el HTML y ábralo directamente.'));
+  LAB.modal(title, el('div', { style: 'display:grid;gap:10px' }, bar, body), { wide: true });
+};
+
+/* -------------------- estructura común de un laboratorio -------------------- */
+/**
+ * Crea la carcasa de un laboratorio con pestañas: Laboratorio, Gráficas, Guía, Pruebas, Registro.
+ * exp: {id, key, title, lede} — devuelve referencias a sus zonas.
+ */
+LAB.buildLabShell = function (exp) {
+  const root = el('section.lab', { id: 'lab-' + exp.id, hidden: true, 'aria-label': exp.title });
+  const chips = el('div.chips');
+  const tabs = ['lab:Laboratorio', 'charts:Gráficas', 'guide:Guía didáctica', 'tests:Pruebas', 'log:Registro'];
+  const tabBar = el('div.tabs', { role: 'tablist' });
+  const panels = {};
+  for (const t of tabs) {
+    const [k, name] = t.split(':');
+    const b = el('button', { type: 'button', role: 'tab', 'aria-selected': k === 'lab' ? 'true' : 'false', 'data-tab': k }, name);
+    b.addEventListener('click', () => exp.showTab(k));
+    tabBar.append(b);
+    panels[k] = el('div', { role: 'tabpanel', 'data-tab': k, hidden: k !== 'lab' });
+  }
+  exp.currentTab = 'lab';
+  exp.showTab = k => {
+    tabBar.querySelectorAll('button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === k ? 'true' : 'false'));
+    for (const [pk, p] of Object.entries(panels)) p.hidden = pk !== k;
+    exp.currentTab = k;
+    exp.onTab && exp.onTab(k);
+  };
+  root.append(el('div.lab-head', el('div.lab-title', el('span.k', exp.key), el('h2', exp.title)), el('p.lab-lede', exp.lede), chips, tabBar), ...Object.values(panels));
+  // zona de laboratorio
+  const controls = el('aside.controls.panel', { 'aria-label': 'Parámetros' });
+  const viewport = el('div.viewport');
+  const playbar = el('div.playbar');
+  const strip = el('div.chart-strip');
+  const alerts = el('div', { style: 'display:grid;gap:8px' });
+  const stage = el('section.stage', alerts, viewport, playbar, strip);
+  const readouts = el('aside.readouts', { 'aria-label': 'Resultados' });
+  panels.lab.append(el('div.lab-grid', controls, stage, readouts));
+  // registro
+  const logBox = el('div.log');
+  const renderLog = ev => {
+    if (ev === null) { logBox.replaceChildren(); return; }
+    logBox.prepend(el('div.ev', el('span.t', ev.wall), el('span.k', ev.kind), el('span', ev.text)));
+  };
+  exp.log = new EventLog();
+  exp.log.onAdd(renderLog);
+  panels.log.append(el('div.panel', { style: 'display:grid;gap:8px' },
+    el('p.small.muted', 'Registro de esta sesión: escenarios cargados, cambios de parámetros relevantes, cambios de integrador, avisos y pruebas. Se incluye en las exportaciones JSON y en los informes.'),
+    el('div.btn-row', el('button.btn.small', { type: 'button', onclick: () => LAB.io.exportText(`registro_${exp.id}.json`, JSON.stringify(exp.log.items, null, 2), 'application/json', 'Exportar registro') }, 'Exportar registro')), logBox));
+  document.getElementById('labs').append(root);
+  return { root, chips, panels, controls, viewport, playbar, strip, readouts, stage, alerts };
+};
+
+/** Chips de validación por nivel en la cabecera del laboratorio. */
+LAB.renderChips = function (exp, chipsEl) {
+  const draw = () => {
+    chipsEl.replaceChildren(...Tests.levels(exp.id).map(l => { const s = Tests.summary(exp.id, l); return el('span.chip.st-' + s.status, { title: STATUS[s.status] }, el('span.g', GLYPH[s.status]), l + ': ' + STATUS[s.status]); }));
+  };
+  Tests.onResult(t => { if (t.exp === exp.id) draw(); });
+  draw();
+};
+
+/** Bloque estándar de escenario + guardar/cargar en la columna de controles. */
+LAB.configBlock = function (exp) {
+  const sel = el('select', { 'aria-label': 'Escenario' }, Object.entries(exp.scenarios).map(([k, s]) => el('option', { value: k }, s.name)));
+  const desc = el('p.small.muted');
+  const showDesc = () => { const s = exp.scenarios[sel.value]; desc.textContent = s ? s.desc : ''; };
+  sel.addEventListener('change', () => { exp.loadScenario(sel.value); showDesc(); });
+  exp._scenarioSel = sel; exp._scenarioDesc = showDesc;
+  const savedSel = el('select', { 'aria-label': 'Configuraciones guardadas' });
+  const refreshSaved = () => {
+    const saves = LAB.store.get('saves.' + exp.id, {});
+    savedSel.replaceChildren(el('option', { value: '' }, Object.keys(saves).length ? 'Guardadas…' : 'Sin configuraciones guardadas'), ...Object.keys(saves).map(k => el('option', { value: k }, k)));
+  };
+  refreshSaved();
+  const nameIn = el('input', { type: 'text', placeholder: 'Nombre', 'aria-label': 'Nombre de la configuración', style: 'width:100%' });
+  const save = () => {
+    const name = (nameIn.value || '').trim() || ('Config ' + U.nowStamp());
+    const saves = LAB.store.get('saves.' + exp.id, {});
+    saves[name] = exp.serialize();
+    if (LAB.store.set('saves.' + exp.id, saves)) { LAB.toast('Guardada en este navegador: ' + name); exp.log.add('guardar', 'Configuración guardada: ' + name); }
+    else LAB.toast('Este navegador no permite almacenamiento local; use «Exportar JSON».');
+    refreshSaved();
+  };
+  const load = () => { const saves = LAB.store.get('saves.' + exp.id, {}); const c = saves[savedSel.value]; if (!c) return; exp.deserialize(c); exp.log.add('cargar', 'Configuración cargada: ' + savedSel.value); LAB.toast('Cargada: ' + savedSel.value); };
+  const del = () => { const saves = LAB.store.get('saves.' + exp.id, {}); if (!saves[savedSel.value]) return; delete saves[savedSel.value]; LAB.store.set('saves.' + exp.id, saves); refreshSaved(); };
+  showDesc();
+  return el('div', { style: 'display:grid;gap:8px' },
+    el('div.prow', el('div.plabel', el('b', 'Escenario')), sel), desc,
+    el('div.btn-row', el('button.btn.small', { type: 'button', onclick: () => exp.loadScenario(sel.value) }, 'Restablecer valores del escenario')),
+    el('details.pgroup', el('summary', 'Guardar y cargar'),
+      el('div', { style: 'display:grid;gap:6px' }, nameIn,
+        el('div.btn-row', el('button.btn.small', { type: 'button', onclick: save }, 'Guardar aquí')),
+        savedSel,
+        el('div.btn-row', el('button.btn.small', { type: 'button', onclick: load }, 'Cargar'), el('button.btn.small.ghost', { type: 'button', onclick: del }, 'Borrar')),
+        el('div.btn-row',
+          el('button.btn.small', { type: 'button', onclick: () => LAB.io.exportText(`config_${exp.id}.json`, JSON.stringify(exp.serialize(), null, 2), 'application/json', 'Exportar configuración') }, 'Exportar JSON'),
+          el('button.btn.small', { type: 'button', onclick: () => LAB.io.importText('Importar configuración', '.json,application/json', t => { const o = JSON.parse(t); if (o.experimento !== exp.id) throw new Error('el archivo corresponde a otro experimento (' + o.experimento + ')'); exp.deserialize(o); exp.log.add('cargar', 'Configuración importada desde JSON'); }) }, 'Importar JSON')),
+        el('p.small.muted', LAB.store.available() ? 'Las configuraciones guardadas quedan en este navegador.' : 'El almacenamiento local no está disponible: use Exportar/Importar JSON.'))));
+};
+
+/** Bucle de animación compartido: cada experimento visible recibe tick(dtReal). */
+LAB.loop = (function () {
+  let last = performance.now();
+  const frame = now => {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    const cur = LAB.current && LAB.experiments[LAB.current];
+    if (cur && cur.tick) { try { cur.tick(dt); } catch (e) { console.error(e); cur.onError && cur.onError(e); } }
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+  return {};
+})();
+})();
+
+'use strict';
+/* =====================================================================
+   RADIACIÓN DE CUERPO NEGRO — MODELO FÍSICO (sin interfaz)
+   Constantes SI exactas desde 2019: h, c, k_B. σ y b se DERIVAN de ellas.
+   Radiancia espectral de Planck (por unidad de ángulo sólido):
+       B_λ(T) = (2hc²/λ⁵) · 1/(e^x − 1),   x = hc/(λ k_B T)
+   Rayleigh–Jeans (límite clásico, x ≪ 1): B_λ = 2 c k_B T / λ⁴
+     (equivale a u_λ = 8π k_B T/λ⁴ para la densidad de energía, u = 4πB/c)
+   Wien (aprox. x ≫ 1): B_λ = (2hc²/λ⁵) e^{−x}
+   ∫₀^∞ B_λ dλ = σT⁴/π ;  emitancia (potencia por área) M = πB → σT⁴
+   Pico de Wien: x_max = 4,965114231744276 (raíz de x = 5(1 − e^{−x}))
+   ===================================================================== */
+(function () {
+const BB = LAB.bb = {};
+BB.h = 6.62607015e-34; BB.c = 299792458; BB.k = 1.380649e-23;
+BB.sigma = 2 * Math.PI ** 5 * BB.k ** 4 / (15 * BB.h ** 3 * BB.c ** 2);   // 5,670374419…e-8
+BB.XMAX = 4.965114231744276;
+BB.b = BB.h * BB.c / (BB.k * BB.XMAX);                                    // 2,897771955…e-3 m·K
+BB.C2 = BB.h * BB.c / BB.k;                                               // 1,438776877…e-2 m·K
+BB.XNU = 2.821439372122079;                                               // pico en frecuencia: x = 3(1 − e^{−x})
+
+/** Radiancia de Planck [W·sr⁻¹·m⁻²·m⁻¹]. Sin desbordamiento: e^x se evita para x grande y expm1 para x pequeño. */
+BB.planck = function (lam, T) {
+  if (!(lam > 0) || !(T > 0)) return 0;
+  const x = BB.C2 / (lam * T), pre = 2 * BB.h * BB.c * BB.c / lam ** 5;
+  if (x > 700) return pre * Math.exp(-x);       // e^x desbordaría; 1/(e^x − 1) = e^{−x}/(1 − e^{−x}) ≈ e^{−x}
+  return pre / Math.expm1(x);
+};
+BB.rj = (lam, T) => 2 * BB.c * BB.k * T / lam ** 4;
+BB.wienApprox = (lam, T) => { const x = BB.C2 / (lam * T); return x > 745 ? 0 : 2 * BB.h * BB.c * BB.c / lam ** 5 * Math.exp(-x); };
+BB.lambdaMax = T => BB.b / T;
+BB.power = T => BB.sigma * T ** 4;                                          // W/m²
+/** Planck por unidad de frecuencia [W·sr⁻¹·m⁻²·Hz⁻¹]. */
+BB.planckNu = (nu, T) => { const x = BB.h * nu / (BB.k * T); return x > 700 ? 2 * BB.h * nu ** 3 / BB.c ** 2 * Math.exp(-x) : 2 * BB.h * nu ** 3 / BB.c ** 2 / Math.expm1(x); };
+
+/**
+ * Fracción de la energía emitida con longitud de onda MENOR que λ (función de radiación de cuerpo negro).
+ * F = (15/π⁴) ∫_x^∞ u³/(e^u − 1) du, x = hc/(λkT). Series exactas en los dos regímenes.
+ */
+BB.fracBelow = function (lam, T) {
+  if (!(lam > 0)) return 0;
+  const x = BB.C2 / (lam * T), K = 15 / Math.PI ** 4;
+  if (x >= 2) { // serie exponencial: Σ e^{−nx}/n (x³ + 3x²/n + 6x/n² + 6/n³)
+    let s = 0; for (let n = 1; n <= 200; n++) { const t = Math.exp(-n * x) / n * (x ** 3 + 3 * x * x / n + 6 * x / (n * n) + 6 / n ** 3); s += t; if (t < 1e-18) break; }
+    return K * s;
+  }
+  // ∫₀^x u³/(e^u − 1) du = x³/3 − x⁴/8 + Σ B₂ₖ x^{2k+3} / ((2k)! (2k+3))
+  const B = [1 / 6, -1 / 30, 1 / 42, -1 / 30, 5 / 66, -691 / 2730, 7 / 6, -3617 / 510, 43867 / 798, -174611 / 330];
+  let s = x ** 3 / 3 - x ** 4 / 8, f = 1;
+  for (let k = 1; k <= B.length; k++) { f *= (2 * k - 1) * (2 * k); s += B[k - 1] * x ** (2 * k + 3) / (f * (2 * k + 3)); }
+  return 1 - K * s;
+};
+BB.fracBand = (l1, l2, T) => Math.max(0, BB.fracBelow(l2, T) - BB.fracBelow(l1, T));
+BB.bands = T => { const uv = BB.fracBelow(380e-9, T), vis = BB.fracBand(380e-9, 750e-9, T); return { uv, vis, ir: Math.max(0, 1 - uv - vis) }; };
+
+/** Integral numérica de B_λ por Simpson en la variable ln λ (equivale a «área bajo la curva»). */
+BB.integrate = function (T, l1 = 1e-8, l2 = 1e-1, N = 4000, f = BB.planck) {
+  const a = Math.log(l1), b = Math.log(l2), h = (b - a) / N; let s = 0;
+  for (let i = 0; i <= N; i++) { const lam = Math.exp(a + i * h), w = i === 0 || i === N ? 1 : i % 2 ? 4 : 2; s += w * f(lam, T) * lam; }
+  return s * h / 3;
+};
+/** Máximo numérico de la curva (sección áurea sobre ln λ), independiente de la ley de Wien. */
+BB.numericPeak = function (T, f = BB.planck, lo = 1e-8, hi = 1e-1) {
+  // barrido grueso y luego sección áurea
+  let best = lo, bv = -1; for (let i = 0; i <= 400; i++) { const l = lo * (hi / lo) ** (i / 400), v = f(l, T); if (v > bv) { bv = v; best = l; } }
+  let a = Math.log(best) - 0.04, b = Math.log(best) + 0.04; const g = (Math.sqrt(5) - 1) / 2;
+  let c = b - g * (b - a), d = a + g * (b - a);
+  for (let i = 0; i < 120; i++) { if (f(Math.exp(c), T) > f(Math.exp(d), T)) b = d; else a = c; c = b - g * (b - a); d = a + g * (b - a); }
+  return Math.exp((a + b) / 2);
+};
+
+/* -------------------- color percibido (CIE 1931 → sRGB) -------------------- */
+// Ajuste analítico de las funciones de igualación CIE 1931 (Wyman, Sloan y Shirley, 2013)
+const g = (l, mu, s1, s2) => { const t = (l - mu) / (l < mu ? s1 : s2); return Math.exp(-0.5 * t * t); };
+BB.cmf = l => [1.056 * g(l, 599.8, 37.9, 31.0) + 0.362 * g(l, 442.0, 16.0, 26.7) - 0.065 * g(l, 501.1, 20.4, 26.2),
+  0.821 * g(l, 568.8, 46.9, 40.5) + 0.286 * g(l, 530.9, 16.3, 31.1),
+  1.217 * g(l, 437.0, 11.8, 36.0) + 0.681 * g(l, 459.0, 26.0, 13.8)];
+/** XYZ integrado (relativo) del espectro f(λ[nm]) entre 380 y 780 nm. */
+BB.xyzOf = function (f) { let X = 0, Y = 0, Z = 0; for (let l = 380; l <= 780; l += 2) { const p = f(l), [x, y, z] = BB.cmf(l); X += p * x; Y += p * y; Z += p * z; } return [X * 2, Y * 2, Z * 2]; };
+BB.xyz = T => BB.xyzOf(l => BB.planck(l * 1e-9, T));
+const lin2s = u => (u <= 0.0031308 ? 12.92 * u : 1.055 * Math.pow(u, 1 / 2.4) - 0.055);
+/**
+ * Color percibido: cromaticidad exacta (CIE → sRGB lineal, desaturando lo que cae fuera de la gama)
+ * y brillo con una «exposición» fija: brillo = (Y/Y_ref)^(1/4) con Y_ref = luminancia a T_ref.
+ */
+BB.YREF = null;
+BB.color = function (T, Tref = 3000) {
+  if (BB.YREF === null || BB._tref !== Tref) { BB.YREF = BB.xyz(Tref)[1]; BB._tref = Tref; }
+  const [X, Y, Z] = BB.xyz(T);
+  if (!(Y > 0)) return { r: 0, g: 0, b: 0, css: 'rgb(0,0,0)', bright: 0, chroma: [0, 0, 0], xy: [NaN, NaN] };
+  let r = 3.2406 * X - 1.5372 * Y - 0.4986 * Z, gg = -0.9689 * X + 1.8758 * Y + 0.0415 * Z, b = 0.0557 * X - 0.2040 * Y + 1.0570 * Z;
+  const mn = Math.min(r, gg, b); if (mn < 0) { r -= mn; gg -= mn; b -= mn; }
+  const mx = Math.max(r, gg, b); const ch = [r / mx, gg / mx, b / mx];
+  const bright = Math.min(1, Math.pow(Y / BB.YREF, 0.25));
+  const to8 = u => Math.round(255 * lin2s(Math.max(0, Math.min(1, u))));
+  const R = to8(ch[0] * bright), G = to8(ch[1] * bright), Bc = to8(ch[2] * bright);
+  return { r: R, g: G, b: Bc, css: `rgb(${R},${G},${Bc})`, bright, chroma: ch, cssFull: `rgb(${to8(ch[0])},${to8(ch[1])},${to8(ch[2])})`, xy: [X / (X + Y + Z), Y / (X + Y + Z)] };
+};
+BB.colorName = function (T) {
+  if (T < 750) return 'no emite luz visible apreciable (solo infrarrojo)';
+  if (T < 1000) return 'rojo oscuro, apenas visible';
+  if (T < 1500) return 'rojo';
+  if (T < 2200) return 'rojo anaranjado';
+  if (T < 3200) return 'anaranjado';
+  if (T < 4500) return 'amarillo anaranjado';
+  if (T < 6500) return 'blanco amarillento';
+  if (T < 8000) return 'blanco';
+  return 'blanco azulado';
+};
+
+/* -------------------- cámara térmica (8–14 µm) -------------------- */
+BB.thermalBand = T => BB.fracBand(8e-6, 14e-6, T) * BB.sigma * T ** 4 / Math.PI; // W·sr⁻¹·m⁻² en la banda LWIR
+/** Paleta «ironbow» de cámara térmica (0 = frío, 1 = caliente). */
+const IRON = [[0, 0, 0, 0], [0.15, 32, 0, 90], [0.35, 140, 0, 150], [0.55, 220, 40, 60], [0.72, 250, 130, 0], [0.88, 255, 215, 40], [1, 255, 255, 235]];
+BB.ironbow = function (u) {
+  u = Math.max(0, Math.min(1, u)); let i = 1; while (i < IRON.length - 1 && IRON[i][0] < u) i++;
+  const [a0, r0, g0, b0] = IRON[i - 1], [a1, r1, g1, b1] = IRON[i], t = (u - a0) / (a1 - a0);
+  return `rgb(${Math.round(r0 + t * (r1 - r0))},${Math.round(g0 + t * (g1 - g0))},${Math.round(b0 + t * (b1 - b0))})`;
+};
+})();
+(function () {
+const BB = LAB.bb;
+/** Color aproximado de una longitud de onda pura [nm] (para la banda del arcoíris). */
+BB.specRGB = function (l) {
+  let r = 0, g = 0, b = 0;
+  if (l >= 380 && l < 440) { r = -(l - 440) / 60; b = 1; } else if (l >= 440 && l < 490) { g = (l - 440) / 50; b = 1; } else if (l >= 490 && l < 510) { g = 1; b = -(l - 510) / 20; }
+  else if (l >= 510 && l < 580) { r = (l - 510) / 70; g = 1; } else if (l >= 580 && l < 645) { r = 1; g = -(l - 645) / 65; } else if (l >= 645 && l <= 780) r = 1;
+  let f = 0; if (l >= 380 && l < 420) f = 0.3 + 0.7 * (l - 380) / 40; else if (l >= 420 && l <= 700) f = 1; else if (l > 700 && l <= 780) f = 0.3 + 0.7 * (780 - l) / 80;
+  const gm = x => Math.round(255 * Math.pow(Math.max(0, x * f), 0.8));
+  return `rgb(${gm(r)},${gm(g)},${gm(b)})`;
+};
+})();
+(function () {
+const BB = LAB.bb;
+/** Luminancia absoluta [cd/m²] = 683 lm/W · ∫ B_λ ȳ dλ. */
+BB.luminance = T => 683 * BB.xyz(T)[1] * 1e-9;
+/** Umbral de visión en la oscuridad: luminancia a la temperatura de Draper (≈ 798 K, inicio del brillo rojo). */
+BB.DRAPER = 798;
+BB.LV_TH = null;
+BB.visible = T => { if (BB.LV_TH === null) BB.LV_TH = BB.luminance(BB.DRAPER); return BB.luminance(T) >= BB.LV_TH; };
+/** Brillo con exposición automática: 0 bajo el umbral; sube a lo largo de dos décadas de luminancia y luego queda a pleno. */
+BB.autoBright = T => { if (!BB.visible(T)) return 0; return Math.min(1, 0.25 + 0.375 * Math.log10(BB.luminance(T) / BB.LV_TH)); };
+})();
+
+'use strict';
+/* =====================================================================
+   RADIACIÓN DE CUERPO NEGRO — INTERFAZ, GRÁFICA, EMISOR, RETOS Y PRUEBAS
+   ===================================================================== */
+(function () {
+const { el, U } = LAB;
+const BB = LAB.bb;
+const isUni = () => exp.mode === 'uni';
+const UNIT = 1e-12;   // W·sr⁻¹·m⁻²·m⁻¹ → MW·sr⁻¹·m⁻²·µm⁻¹
+const SAVE_COLS = ['#f0a057', '#b39cf2', '#6fd398', '#f07fb6', '#ffd65c', '#9aa7ba'];
+const PRESETS = [{ T: 300, name: 'Tierra', s: 'Tierra', icon: '🌍' }, { T: 350, name: 'Taza de café', s: 'Taza', icon: '☕' }, { T: 1500, name: 'Hierro al rojo vivo', s: 'Hierro', icon: '⚒' }, { T: 3000, name: 'Filamento incandescente', s: 'Filamento', icon: '💡' }, { T: 5800, name: 'Superficie del Sol', s: 'Sol', icon: '☀' }, { T: 10000, name: 'Estrella masiva azul', s: 'Estrella azul', icon: '✦' }];
+const presetName = T => { const p = PRESETS.find(q => Math.abs(q.T - T) < 0.5); return p ? p.name : null; };
+
+const schema = [
+  { group: 'Temperatura', items: [
+    { key: 'T', label: 'Temperatura absoluta T', unit: 'K', min: 100, max: 10000, step: 1, def: 5800, log: true, help: 'Deslizador logarítmico de 100 K a 10 000 K. Use los botones ±50 K para el ajuste fino o escriba el valor exacto.' } ] },
+  { group: 'Ejes de la gráfica', items: [
+    { key: 'xRange', label: 'Rango de longitudes de onda', type: 'select', def: 'std', options: [['std', '0,1 – 3 µm (fijo)'], ['adapt', 'Adaptativo (hasta 5 λ_max)'], ['log', 'Logarítmico 0,1 – 100 µm']] },
+    { key: 'yMode', label: 'Escala vertical', type: 'select', def: 'auto', options: [['auto', 'Autoescala a la curva actual'], ['abs', 'Absoluta con zoom'], ['log', 'Logarítmica']], help: 'Entre 100 K y 10 000 K la altura del pico cambia en un factor 10¹⁰ (∝ T⁵): la autoescala es imprescindible para ver la forma; la escala absoluta muestra cuánto crece de verdad.' },
+    { key: 'yMax', label: 'Zoom: máximo del eje vertical', unit: 'MW/(m²·sr·µm)', min: 1e-6, max: 1000, step: 0.001, def: 30, log: true, when: v => v.yMode === 'abs' } ] },
+  { group: 'Mostrar', items: [
+    { key: 'showVis', label: 'Banda visible (380–750 nm) como arcoíris', type: 'check', def: true },
+    { key: 'showWien', label: 'Pico de Wien λ_max', type: 'check', def: true },
+    { key: 'showRJ', label: 'Curva clásica de Rayleigh–Jeans (catástrofe UV)', type: 'check', def: false },
+    { key: 'showWienA', label: 'Aproximación de Wien (x ≫ 1)', type: 'check', def: false, when: () => exp.mode === 'uni' },
+    { key: 'showPower', label: 'Potencia por metro cuadrado P/A = σT⁴', type: 'check', def: true },
+    { key: 'showBands', label: 'Porcentajes UV / visible / IR', type: 'check', def: true },
+    { key: 'showSaved', label: 'Curvas guardadas', type: 'check', def: true } ] },
+  { group: 'Emisor', items: [
+    { key: 'emitter', label: 'Objeto', type: 'select', def: 'sphere', options: [['sphere', 'Esfera caliente'], ['cavity', 'Cavidad con orificio (cuerpo negro ideal)']] },
+    { key: 'expo', label: 'Exposición del «ojo»', type: 'select', def: 'fixed', options: [['fixed', 'Fija (referencia: filamento a 3000 K)'], ['auto', 'Automática (ojo adaptado a la oscuridad)']], help: 'Fija: el brillo crece con T como lo vería un ojo adaptado a una bombilla. Automática: ojo adaptado a la oscuridad; aun así, por debajo del punto de Draper (≈ 798 K) la luz visible es demasiado débil y el objeto se ve negro.' } ] }
+];
+const scenarios = {
+  sol: { name: 'La superficie del Sol (5800 K)', desc: 'El pico cae en el visible (≈0,50 µm) y la luz suma un blanco ligeramente amarillento.', p: { T: 5800 } },
+  taza: { name: 'Taza de café (350 K)', desc: 'No emite luz visible: todo es infrarrojo térmico. La cámara térmica sí la ve.', p: { T: 350, xRange: 'adapt' } },
+  hierro: { name: 'Hierro al rojo vivo (1500 K)', desc: 'Solo la cola de la curva entra en el visible, por el lado rojo.', p: { T: 1500 } },
+  bombilla: { name: 'Filamento incandescente (3000 K)', desc: 'Más del 85 % de la energía es infrarrojo: por eso las bombillas incandescentes calientan tanto y alumbran poco.', p: { T: 3000 } },
+  azul: { name: 'Estrella masiva azul (10 000 K)', desc: 'El pico está en el ultravioleta (0,29 µm); el visible tiene más azul que rojo.', p: { T: 10000 } },
+  catastrofe: { name: 'Catástrofe ultravioleta', desc: 'Compare la curva cuántica de Planck con la clásica de Rayleigh–Jeans, que crece sin límite hacia λ corta.', p: { T: 5000, showRJ: true, yMode: 'log', xRange: 'log' }, uni: true },
+  stefan: { name: 'Reto Stefan: 2000 K → 4000 K', desc: 'Guarde la curva a 2000 K, suba a 4000 K y compare las áreas.', p: { T: 2000, yMode: 'abs', yMax: 6 }, uni: true }
+};
+const exp = LAB.experiments.bb = {
+  id: 'bb', key: 'B', title: 'Radiación de cuerpo negro',
+  lede: 'Todo cuerpo emite radiación según su temperatura. La curva de Planck explica por qué un metal pasa del rojo al blanco al calentarse, por qué el Sol es blanco y por qué la física clásica falló: el origen de la física cuántica.',
+  scenarios
+};
+exp.mode = LAB.store.get('mode', 'sec');
+exp.saved = LAB.store.get('saved', []);
+if (!Array.isArray(exp.saved)) exp.saved = [];
+
+/* ------------------------------ init ------------------------------ */
+exp.init = function () {
+  const z = exp.z = LAB.buildLabShell(exp);
+  z.root.querySelector('.tabs button[data-tab="guide"]').textContent = 'Retos y teoría';
+  z.root.querySelector('.tabs button[data-tab="charts"]').textContent = 'Gráficas y datos';
+  exp.panel = new LAB.ParamPanel(schema, k => exp.onParam(k));
+  const pre = el('div.presets', ...PRESETS.map(p => el('button.btn.small', { type: 'button', title: `${p.name} · ${p.T} K`, onclick: () => exp.goT(p.T, p.name) }, `${p.icon} ${p.s} · ${p.T.toLocaleString('es')} K`)));
+  const fine = el('div.btn-row', el('button.btn.small', { type: 'button', onclick: () => exp.goT(exp.panel.values.T - 50, null, true) }, '− 50 K'), el('button.btn.small', { type: 'button', onclick: () => exp.goT(exp.panel.values.T + 50, null, true) }, '+ 50 K'), el('button.btn.small', { type: 'button', onclick: () => exp.goT(exp.panel.values.T - 1, null, true) }, '− 1 K'), el('button.btn.small', { type: 'button', onclick: () => exp.goT(exp.panel.values.T + 1, null, true) }, '+ 1 K'));
+  z.controls.append(LAB.configBlock(exp), el('div.panel', { style: 'display:grid;gap:8px;padding:10px' }, el('b', { style: 'font-size:.85rem' }, 'Preajustes de temperatura'), pre, el('b', { style: 'font-size:.85rem' }, 'Ajuste fino'), fine), exp.panel.root);
+  exp.cv = el('canvas', { 'aria-label': 'Espectro de Planck: radiancia espectral frente a longitud de onda', style: 'height:clamp(360px,58vh,620px)' });
+  exp.em = el('canvas.emit', { 'aria-label': 'Emisor: a simple vista y con cámara térmica', style: 'height:clamp(360px,58vh,620px)' });
+  z.viewport.append(el('div.bbview', exp.cv, exp.em));
+  exp.cv.addEventListener('mousemove', e => { const r = exp.cv.getBoundingClientRect(); exp.hover = e.clientX - r.left; exp.drawSpectrum(); });
+  exp.cv.addEventListener('mouseleave', () => { exp.hover = null; exp.drawSpectrum(); });
+  exp.clock = el('span.clock');
+  z.playbar.append(el('button.btn.primary', { type: 'button', onclick: () => exp.saveCurve() }, '＋ Guardar curva actual'), el('button.btn', { type: 'button', onclick: () => { exp.saved = []; LAB.store.set('saved', []); exp.log.add('curvas', 'Curvas guardadas borradas'); exp.refresh(); } }, 'Borrar curvas'), el('button.btn', { type: 'button', onclick: () => exp.goT(exp.panel.values.T * 2, null) }, '× 2 la temperatura'), exp.clock);
+  // lecturas
+  exp.sit = el('p.small', { style: 'margin:0' });
+  const gi = exp.gIn = LAB.readoutGroup('Temperatura', 'in'); gi.body.append(exp.sit);
+  [['TK', 'T', 'K'], ['TC', 'T', '°C']].forEach(r => gi.row(...r));
+  const go = exp.gOut = LAB.readoutGroup('Mediciones en directo', 'out');
+  [['lmax', 'Pico de Wien λ_max = b/T', ''], ['nu', 'Frecuencia ν = c/λ_max', 'THz'], ['Epk', 'Energía del fotón en el pico', 'eV'], ['P', 'Potencia por área P/A = σT⁴', ''], ['Psun', 'Comparada con el Sol (5800 K)', '×'], ['Bmax', 'B_λ en el pico', 'MW/(m²·sr·µm)'], ['area', 'Área numérica ∫B_λdλ', 'W/(m²·sr)'], ['areaT', 'σT⁴/π (teoría)', 'W/(m²·sr)'], ['areaE', 'Diferencia numérica', ''], ['uv', 'Ultravioleta (< 380 nm)', '%'], ['vis', 'Visible (380–750 nm)', '%'], ['ir', 'Infrarrojo (> 750 nm)', '%'], ['col', 'Color percibido', ''], ['nupk', 'Pico en frecuencia ν_pk = 2,821 kT/h', 'THz'], ['rj', 'Rayleigh–Jeans / Planck en 0,3 µm', '×']].forEach(r => go.row(...r));
+  exp.msgs = el('div.msgs'); const gv = LAB.readoutGroup('Diagnósticos', 'val'); gv.body.append(exp.msgs);
+  const gc = LAB.readoutGroup('Constantes fundamentales', 'model');
+  gc.body.append(el('div.eq', { style: 'white-space:normal;font-size:.8rem' }, `h = 6,62607015×10⁻³⁴ J·s · c = 299 792 458 m/s · k_B = 1,380649×10⁻²³ J/K (exactas, SI 2019) · σ = 2π⁵k⁴/(15h³c²) = ${U.fmt(BB.sigma, 10)} W·m⁻²·K⁻⁴ · b = hc/(4,965114 k) = ${U.fmt(BB.b * 1e6, 8)} µm·K`));
+  const gm = LAB.readoutGroup('Aproximaciones del modelo', 'model');
+  gm.body.append(el('ul.notes', el('li', 'Cuerpo negro ideal (emisividad 1). Los objetos reales (taza, hierro, filamento) emiten algo menos y su espectro no es exactamente de Planck.'),
+    el('li', 'La gráfica es radiancia por estereorradián; la potencia por área es π veces el área bajo la curva: P/A = π∫B_λdλ = σT⁴.'),
+    el('li', 'Color: funciones de igualación CIE 1931 (ajuste analítico) → sRGB; colores fuera de la gama se desaturan. Por debajo del umbral de visión (luminancia del punto de Draper, ≈ 798 K) el objeto se dibuja negro en cualquier exposición.'),
+    el('li', 'Cámara térmica: banda de 8–14 µm con escala automática desde 280 K; una cámara real además depende de la emisividad del objeto.')));
+  z.readouts.append(el('div.panel', gi.el), el('div.panel', go.el), el('div.panel', gv.el), el('div.panel.only-uni', gc.el), el('div.panel', gm.el));
+  // gráficas
+  const cs = exp.charts = {}; const wide = el('div.wide-grid');
+  const mk = (k, t, o, n) => { const b = LAB.chartBox(t, Object.assign({ tall: true }, o), n); cs[k] = b.chart; wide.append(b.box); };
+  mk('stefan', 'Ley de Stefan–Boltzmann: P/A frente a T (log–log)', { xLabel: 'log₁₀ T  (2 = 100 K, 4 = 10 000 K)', yLabel: 'P/A [W/m²]', yLog: true }, 'En escala log–log es una recta de pendiente 4. Los puntos son sus curvas guardadas (área numérica × π).');
+  mk('wien', 'Ley de Wien: λ_max frente a 1/T', { xLabel: '1/T [K⁻¹ × 1000]', yLabel: 'λ_max [µm]' }, 'Recta de pendiente b = 2898 µm·K. Puntos: máximos encontrados numéricamente en sus curvas guardadas.');
+  mk('bands', 'Reparto de la energía por bandas', { xLabel: 'T [K]', yLabel: 'fracción [%]' }, 'Fracción exacta de σT⁴ en cada banda (función de radiación de cuerpo negro).');
+  mk('rj', 'Planck, Rayleigh–Jeans y Wien a la T actual', { xLabel: 'λ [µm] (log₁₀)', yLabel: 'B_λ [MW/(m²·sr·µm)]', yLog: true }, 'Rayleigh–Jeans coincide con Planck a λ larga y diverge como λ⁻⁴ a λ corta: su área es infinita (catástrofe ultravioleta).');
+  exp.tbl = el('div.table-wrap');
+  z.panels.charts.append(el('div.panel.toolbar', el('button.btn.small', { type: 'button', onclick: () => exp.exportCSV() }, 'Exportar curva y tabla (CSV)'), el('button.btn.small', { type: 'button', onclick: () => exp.drawCharts() }, 'Actualizar gráficas')), wide, el('div.panel', { style: 'display:grid;gap:8px' }, el('h3', 'Curvas guardadas'), exp.tbl));
+  exp.buildGuide(z.panels.guide);
+  z.panels.tests.append(LAB.testPanel('bb', 'Pruebas de las constantes, la ley de Planck sin desbordamientos, Wien, Stefan–Boltzmann, límites clásicos, fracciones por banda y colores.'));
+  LAB.renderChips(exp, z.chips);
+  document.querySelectorAll('#modeSel button').forEach(b => b.addEventListener('click', () => exp.setMode(b.dataset.mode)));
+  const saved = LAB.store.get('last.bb');
+  if (saved && saved.params) exp.deserialize(saved); else exp.loadScenario('sol');
+  exp.setMode(exp.mode, true);
+};
+const applyVis = () => { document.querySelectorAll('.only-sec').forEach(x => { x.hidden = exp.mode === 'uni'; }); document.querySelectorAll('.only-uni').forEach(x => { x.hidden = exp.mode !== 'uni'; }); };
+exp.setMode = function (m, silent) {
+  exp.mode = m; LAB.store.set('mode', m);
+  document.querySelectorAll('#modeSel button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m ? 'true' : 'false'));
+  exp.panel.refreshVisibility(); applyVis();
+  if (!silent) exp.log.add('modo', m === 'uni' ? 'Modo Universidad' : 'Modo Secundaria / Bachillerato');
+  exp.refresh();
+};
+exp.onParam = function (k) { if (k === 'T') exp.anim = null; exp.refresh(); exp.autosave(); };
+exp.autosave = () => LAB.store.set('last.bb', exp.serialize());
+exp.loadScenario = function (k) {
+  const s = scenarios[k]; if (!s) return;
+  if (s.uni && exp.mode !== 'uni') exp.setMode('uni', true);
+  exp.panel.setValues(Object.assign(exp.panel.defaults(), s.p));
+  exp.scenario = k; if (exp._scenarioSel) { exp._scenarioSel.value = k; exp._scenarioDesc(); }
+  exp.anim = null; exp.log.add('escenario', 'Escenario cargado: ' + s.name);
+  exp.refresh(); exp.autosave();
+};
+exp.serialize = () => ({ experimento: 'bb', version: LAB.version, escenario: exp.scenario || null, modo: exp.mode, params: Object.assign({}, exp.panel.values), curvas: exp.saved.map(s => s.T), fecha: U.nowStamp() });
+exp.deserialize = function (o) {
+  exp.panel.setValues(o.params || {}); exp.scenario = o.escenario; if (o.modo) exp.mode = o.modo;
+  if (Array.isArray(o.curvas)) { exp.saved = []; o.curvas.filter(Number.isFinite).slice(0, 6).forEach(T => exp.addSaved(T)); }
+  if (exp._scenarioSel && o.escenario) { exp._scenarioSel.value = o.escenario; exp._scenarioDesc(); }
+  exp.refresh();
+};
+/** Lleva T al valor pedido con una transición suave (en escala logarítmica). */
+exp.goT = function (T, name, instant) {
+  T = U.clamp(Math.round(T), 100, 10000);
+  if (instant) { exp.anim = null; exp.panel.setValues({ T }); exp.refresh(); exp.autosave(); return; }
+  exp.anim = { from: Math.log(exp.panel.values.T), to: Math.log(T), t: 0, dur: 0.7, target: T };
+  if (name) exp.log.add('preajuste', `${name}: ${T} K`);
+};
+exp.tick = function (dt) {
+  if (!exp.anim) return;
+  const a = exp.anim; a.t += dt; const u = Math.min(1, a.t / a.dur), e = u < 0.5 ? 2 * u * u : 1 - 2 * (1 - u) ** 2;
+  const T = u >= 1 ? a.target : Math.round(Math.exp(a.from + (a.to - a.from) * e));
+  exp.panel.setValues({ T }); exp.refresh();
+  if (u >= 1) { exp.anim = null; exp.autosave(); }
+};
+exp.addSaved = function (T) {
+  const area = BB.integrate(T), lp = BB.numericPeak(T);
+  exp.saved.push({ T, area, lp, color: SAVE_COLS[exp.saved.length % SAVE_COLS.length] });
+};
+exp.saveCurve = function () {
+  const T = exp.panel.values.T;
+  if (exp.saved.some(s => Math.abs(s.T - T) < 0.5)) { LAB.toast('Esa curva ya está guardada.'); return; }
+  if (exp.saved.length >= 6) { exp.saved.shift(); exp.saved.forEach((s, i) => { s.color = SAVE_COLS[i]; }); }
+  exp.addSaved(T); LAB.store.set('saved', exp.saved);
+  const s = exp.saved[exp.saved.length - 1];
+  exp.log.add('curva', `Curva guardada: T = ${T} K, λ_max (numérico) = ${U.fmt(s.lp * 1e6, 6)} µm, área = ${U.fmt(s.area, 6)} W/(m²·sr)`);
+  exp.refresh(); exp.autosave();
+};
+
+/* ------------------------------ lecturas ------------------------------ */
+const showRow = (k, on) => { const r = exp.gOut.rows[k]; if (r) r.parentElement.parentElement.hidden = !on; };
+const fmtP = W => (W >= 1e6 ? `${U.fmt(W / 1e6, 4)} MW/m²` : W >= 1e3 ? `${U.fmt(W / 1e3, 4)} kW/m²` : `${U.fmt(W, 4)} W/m²`);
+exp.refresh = function () { if (!exp.panel) return; exp.updateReadouts(); exp.drawSpectrum(); exp.drawEmitter(); if (exp.currentTab === 'charts') exp.drawCharts(); };
+exp.updateReadouts = function () {
+  const v = exp.panel.values, T = v.T, uni = isUni(), gi = exp.gIn, go = exp.gOut, msgs = [];
+  for (const k of ['Bmax', 'area', 'areaT', 'areaE', 'nupk', 'rj']) showRow(k, uni);
+  gi.set('TK', U.fmt(T, 6)); gi.set('TC', U.fmt(T - 273.15, 6));
+  const pn = presetName(T); exp.sit.textContent = pn ? `${pn} · ${BB.colorName(T)}` : BB.colorName(T);
+  const lm = BB.lambdaMax(T), bd = BB.bands(T), P = BB.power(T);
+  go.set('lmax', `${U.fmt(lm * 1e6, 5)} µm = ${U.fmt(lm * 1e9, 5)} nm`); go.set('nu', U.fmt(BB.c / lm / 1e12, 5)); go.set('Epk', U.fmt(BB.h * BB.c / lm / 1.602176634e-19, 4));
+  go.set('P', fmtP(P)); go.set('Psun', U.fmt(P / BB.power(5800), 4));
+  go.set('Bmax', U.fmt(BB.planck(lm, T) * UNIT, 5));
+  const A = exp.area = BB.integrate(T), At = BB.sigma * T ** 4 / Math.PI;
+  go.set('area', U.fmt(A, 8)); go.set('areaT', U.fmt(At, 8)); go.set('areaE', U.fmt(A / At - 1, 2));
+  go.set('uv', U.fmt(100 * bd.uv, 4)); go.set('vis', U.fmt(100 * bd.vis, 4)); go.set('ir', U.fmt(100 * bd.ir, 4));
+  go.set('col', BB.colorName(T)); go.set('nupk', U.fmt(BB.XNU * BB.k * T / BB.h / 1e12, 5));
+  go.set('rj', U.fmt(BB.rj(0.3e-6, T) / BB.planck(0.3e-6, T), 4));
+  // diagnósticos
+  if (bd.vis < 1e-6) msgs.push(['info', `A ${U.fmt(T, 5)} K prácticamente no hay luz visible (${U.fmt(100 * bd.vis, 2)} % de la energía): el objeto se ve negro en la oscuridad, pero la cámara térmica lo detecta.`]);
+  else if (T < 1000) msgs.push(['info', 'Apenas comienza a verse un rojo muy oscuro (punto de Draper, ≈ 800 K).']);
+  if (lm < 380e-9) msgs.push(['info', `El pico está en el ultravioleta (${U.fmt(lm * 1e9, 4)} nm), pero el visible recibe más azul que rojo: el objeto se ve blanco azulado.`]);
+  else if (lm <= 750e-9) msgs.push(['ok', `El pico (${U.fmt(lm * 1e9, 4)} nm) está dentro del visible.`]);
+  if (v.xRange === 'std' && lm > 3e-6) msgs.push(['warn', `El pico (${U.fmt(lm * 1e6, 4)} µm) queda fuera del rango 0,1–3 µm: elija «Adaptativo» o «Logarítmico» para verlo.`]);
+  if (uni && v.showRJ) msgs.push(['warn', `Rayleigh–Jeans en 0,3 µm predice ${U.fmt(BB.rj(0.3e-6, T) / BB.planck(0.3e-6, T), 3)} veces lo que da Planck; su área total es infinita. Planck lo resolvió en 1900 suponiendo energía cuantizada E = hν.`]);
+  if (uni) msgs.push(['ok', `Área numérica (Simpson, 4000 intervalos en ln λ) frente a σT⁴/π: diferencia relativa ${U.fmt(Math.abs(A / At - 1), 2)}.`]);
+  LAB.setMsgs(exp.msgs, msgs);
+  exp.clock.textContent = `${exp.saved.length} curva${exp.saved.length === 1 ? '' : 's'} guardada${exp.saved.length === 1 ? '' : 's'}`;
+};
+
+/* ------------------------------ gráfica del espectro ------------------------------ */
+exp.xRange = function () {
+  const v = exp.panel.values, lm = BB.lambdaMax(v.T);
+  if (v.xRange === 'adapt') return { log: false, a: 0.02e-6, b: Math.max(1e-6, 5 * lm) };
+  if (v.xRange === 'log') return { log: true, a: 0.1e-6, b: 100e-6 };
+  return { log: false, a: 0.1e-6, b: 3e-6 };
+};
+exp.drawSpectrum = function () {
+  const cv = exp.cv; if (!cv || !cv.isConnected || !cv.clientWidth) return;
+  const { ctx, w, h } = LAB.fitCanvas(cv), T0 = LAB.theme(), v = exp.panel.values, T = v.T, uni = isUni();
+  ctx.fillStyle = '#060b14'; ctx.fillRect(0, 0, w, h);
+  const L = 66, R = w - 14, TOP = 50, BOT = h - 42, xr = exp.xRange();
+  const X = lam => (xr.log ? L + (Math.log10(lam) - Math.log10(xr.a)) / (Math.log10(xr.b) - Math.log10(xr.a)) * (R - L) : L + (lam - xr.a) / (xr.b - xr.a) * (R - L));
+  const lamAt = px => (xr.log ? 10 ** (Math.log10(xr.a) + (px - L) / (R - L) * (Math.log10(xr.b) - Math.log10(xr.a))) : xr.a + (px - L) / (R - L) * (xr.b - xr.a));
+  const N = Math.max(200, Math.round(R - L)), lams = new Float64Array(N + 1), ys = new Float64Array(N + 1);
+  let ymax = 0; for (let i = 0; i <= N; i++) { const l = lamAt(L + (R - L) * i / N); lams[i] = l; ys[i] = BB.planck(l, T) * UNIT; if (ys[i] > ymax) ymax = ys[i]; }
+  if (v.yMode === 'abs') ymax = v.yMax; else ymax = ymax > 0 ? ymax * 1.12 : 1;
+  const ylog = v.yMode === 'log', ymin = ylog ? ymax * 1e-7 : 0;
+  const Y = y => (ylog ? (y > 0 ? BOT - (Math.log10(y) - Math.log10(ymin)) / (Math.log10(ymax) - Math.log10(ymin)) * (BOT - TOP) : BOT + 10) : BOT - y / ymax * (BOT - TOP));
+  const clipY = y => Math.max(TOP - 2, Math.min(BOT + 2, y));
+  // banda visible
+  if (v.showVis) {
+    const a = Math.max(L, X(380e-9)), b = Math.min(R, X(750e-9));
+    if (b > a) { for (let px = Math.floor(a); px < b; px++) { ctx.fillStyle = BB.specRGB(lamAt(px) * 1e9); ctx.globalAlpha = 0.28; ctx.fillRect(px, TOP, 1, BOT - TOP); } ctx.globalAlpha = 1; ctx.fillStyle = 'rgba(230,235,245,.75)'; ctx.font = `10px ${T0.body}`; ctx.textAlign = 'center'; ctx.fillText('visible', (a + b) / 2, TOP + 12); ctx.textAlign = 'left'; }
+    const uvx = X(380e-9); if (uvx > L) { ctx.fillStyle = 'rgba(179,156,242,.10)'; ctx.fillRect(L, TOP, uvx - L, BOT - TOP); ctx.fillStyle = 'rgba(179,156,242,.85)'; ctx.font = `10px ${T0.body}`; ctx.fillText('UV', L + 4, TOP + 12); }
+    const irx = X(750e-9); if (irx < R) { ctx.fillStyle = 'rgba(240,120,90,.07)'; ctx.fillRect(Math.max(L, irx), TOP, R - Math.max(L, irx), BOT - TOP); ctx.fillStyle = 'rgba(240,140,110,.85)'; ctx.fillText('infrarrojo', Math.max(L, irx) + 6, TOP + 12); }
+  }
+  // rejilla y ejes
+  ctx.strokeStyle = 'rgba(120,140,170,.25)'; ctx.lineWidth = 1; ctx.fillStyle = T0['ink-2']; ctx.font = `10px ${T0.mono}`;
+  const xt = xr.log ? [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100] : (() => { const span = (xr.b - xr.a) * 1e6, st = span > 20 ? 5 : span > 8 ? 2 : span > 3.5 ? 1 : span > 1.5 ? 0.5 : span > 0.6 ? 0.2 : 0.1, out = []; for (let x = Math.ceil(xr.a * 1e6 / st) * st; x <= xr.b * 1e6 + 1e-9; x += st) out.push(+x.toFixed(6)); return out; })();
+  ctx.textAlign = 'center';
+  for (const x of xt) { const px = X(x * 1e-6); if (px < L - 1 || px > R + 1) continue; ctx.beginPath(); ctx.moveTo(px, TOP); ctx.lineTo(px, BOT); ctx.stroke(); ctx.fillText(U.fmt(x, 3), px, BOT + 14); }
+  ctx.textAlign = 'right'; ctx.fillText('λ [µm]', R, BOT + 30);
+  const yt = ylog ? (() => { const o = []; for (let e = Math.ceil(Math.log10(ymin)); e <= Math.log10(ymax); e++) o.push(10 ** e); return o; })() : [0, 0.25, 0.5, 0.75, 1].map(f => f * ymax);
+  for (const y of yt) { const py = Y(y); ctx.beginPath(); ctx.moveTo(L, py); ctx.lineTo(R, py); ctx.stroke(); ctx.fillText(U.fmt(y, 3), L - 5, py + 3); }
+  ctx.save(); ctx.translate(12, (TOP + BOT) / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.fillText('B_λ [MW/(m²·sr·µm)]', 0, 0); ctx.restore();
+  ctx.strokeStyle = T0['ink-3']; ctx.strokeRect(L + 0.5, TOP + 0.5, R - L, BOT - TOP);
+  ctx.save(); ctx.beginPath(); ctx.rect(L, TOP, R - L, BOT - TOP); ctx.clip();
+  // curvas guardadas
+  if (v.showSaved) for (const s of exp.saved) {
+    ctx.strokeStyle = s.color; ctx.lineWidth = 1.6; ctx.setLineDash([6, 4]); ctx.beginPath();
+    for (let i = 0; i <= N; i++) { const py = clipY(Y(BB.planck(lams[i], s.T) * UNIT)); if (i) ctx.lineTo(X(lams[i]), py); else ctx.moveTo(X(lams[i]), py); } ctx.stroke(); ctx.setLineDash([]);
+  }
+  // relleno y curva de Planck
+  const grad = ctx.createLinearGradient(0, TOP, 0, BOT); grad.addColorStop(0, 'rgba(95,242,255,.32)'); grad.addColorStop(1, 'rgba(95,242,255,.04)');
+  ctx.beginPath(); ctx.moveTo(X(lams[0]), BOT); for (let i = 0; i <= N; i++) ctx.lineTo(X(lams[i]), clipY(Y(ys[i]))); ctx.lineTo(X(lams[N]), BOT); ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
+  ctx.shadowColor = 'rgba(95,242,255,.85)'; ctx.shadowBlur = 10; ctx.strokeStyle = '#7ff6ff'; ctx.lineWidth = 2.6; ctx.beginPath();
+  for (let i = 0; i <= N; i++) { const py = clipY(Y(ys[i])); if (i) ctx.lineTo(X(lams[i]), py); else ctx.moveTo(X(lams[i]), py); } ctx.stroke(); ctx.shadowBlur = 0;
+  if (v.showRJ) { ctx.strokeStyle = '#ff5fd2'; ctx.lineWidth = 2; ctx.setLineDash([8, 5]); ctx.beginPath(); for (let i = 0; i <= N; i++) { const py = clipY(Y(BB.rj(lams[i], T) * UNIT)); if (i) ctx.lineTo(X(lams[i]), py); else ctx.moveTo(X(lams[i]), py); } ctx.stroke(); ctx.setLineDash([]); }
+  if (uni && v.showWienA) { ctx.strokeStyle = '#ffd65c'; ctx.lineWidth = 1.6; ctx.setLineDash([2, 3]); ctx.beginPath(); for (let i = 0; i <= N; i++) { const py = clipY(Y(BB.wienApprox(lams[i], T) * UNIT)); if (i) ctx.lineTo(X(lams[i]), py); else ctx.moveTo(X(lams[i]), py); } ctx.stroke(); ctx.setLineDash([]); }
+  ctx.restore();
+  // etiquetas de curvas guardadas
+  if (v.showSaved && exp.saved.length) { ctx.font = `10px ${T0.mono}`; ctx.fillStyle = 'rgba(6,11,20,.8)'; ctx.fillRect(R - 92, TOP + 54, 86, 14 * exp.saved.length + 6); exp.saved.forEach((s, i) => { ctx.fillStyle = s.color; ctx.textAlign = 'left'; ctx.fillText(`- - ${U.fmt(s.T, 5)} K`, R - 86, TOP + 66 + 14 * i); }); }
+  // pico de Wien
+  const lm = BB.lambdaMax(T), pxm = X(lm);
+  if (v.showWien) {
+    if (pxm >= L && pxm <= R) {
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.3; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(pxm, TOP); ctx.lineTo(pxm, BOT); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = '#ffffff'; ctx.font = `11px ${T0.mono}`; ctx.textAlign = pxm > (L + R) / 2 ? 'right' : 'left';
+      ctx.fillText(`λ_max = ${U.fmt(lm * 1e6, 4)} µm`, pxm + (pxm > (L + R) / 2 ? -6 : 6), TOP + 28); ctx.textAlign = 'left';
+    } else { ctx.fillStyle = '#ffffff'; ctx.font = `11px ${T0.mono}`; ctx.textAlign = 'right'; ctx.fillText(`pico en ${U.fmt(lm * 1e6, 4)} µm → fuera del rango`, R - 6, TOP + 28); ctx.textAlign = 'left'; }
+  }
+  // encabezado con bandas y potencia
+  ctx.fillStyle = T0.ink; ctx.font = `12px ${T0.mono}`; ctx.textAlign = 'left';
+  const narrow = w < 600; if (narrow) ctx.font = `10px ${T0.mono}`;
+  let hx = narrow ? 8 : L; const put = (txt, col) => { ctx.fillStyle = col; ctx.fillText(txt, hx, 17); hx += ctx.measureText(txt).width + (narrow ? 8 : 14); };
+  put(`T = ${U.fmt(T, 5)} K`, T0.ink);
+  if (v.showBands) { const bd = BB.bands(T); put(`UV ${U.fmt(100 * bd.uv, 3)} %`, '#c9b8ff'); put(`visible ${U.fmt(100 * bd.vis, 3)} %`, '#d7ff7a'); put(`IR ${U.fmt(100 * bd.ir, 3)} %`, '#ffab91'); }
+  if (v.showPower) { ctx.fillStyle = '#7ff6ff'; ctx.fillText(`P/A = σT⁴ = ${fmtP(BB.power(T))}`, narrow ? 8 : L, 35); if (uni && w >= 760) { const wP = ctx.measureText(`P/A = σT⁴ = ${fmtP(BB.power(T))}`).width; ctx.fillStyle = T0['ink-2']; ctx.font = `10px ${T0.mono}`; ctx.fillText(`· π∫B_λdλ = ${fmtP(Math.PI * (exp.area || BB.integrate(T)))} (numérico)`, L + wP + 10, 35); } }
+  if (v.showRJ) { ctx.fillStyle = '#ff5fd2'; ctx.font = `11px ${T0.body}`; ctx.fillText('- - Rayleigh–Jeans (clásica) → ∞', L + 8, TOP + 44); }
+  // lectura bajo el cursor
+  if (exp.hover !== null && exp.hover !== undefined && exp.hover >= L && exp.hover <= R) {
+    const lam = lamAt(exp.hover), B = BB.planck(lam, T) * UNIT, py = clipY(Y(B));
+    ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(exp.hover, TOP); ctx.lineTo(exp.hover, BOT); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#7ff6ff'; ctx.beginPath(); ctx.arc(exp.hover, py, 4, 0, 7); ctx.fill();
+    const lines = [`λ = ${U.fmt(lam * 1e6, 4)} µm`, `B = ${U.fmt(B, 4)}`, ...(v.showRJ ? [`RJ = ${U.fmt(BB.rj(lam, T) * UNIT, 4)}`] : [])];
+    ctx.font = `11px ${T0.mono}`; const bw = Math.max(...lines.map(s => ctx.measureText(s).width)) + 12, bx = exp.hover + 10 + bw > R ? exp.hover - bw - 10 : exp.hover + 10;
+    ctx.fillStyle = 'rgba(10,17,34,.92)'; ctx.fillRect(bx, TOP + 40, bw, lines.length * 15 + 8); ctx.fillStyle = T0.ink; lines.forEach((s, i) => ctx.fillText(s, bx + 6, TOP + 55 + 15 * i));
+  }
+};
+
+/* ------------------------------ emisor ------------------------------ */
+exp.drawEmitter = function () {
+  const cv = exp.em; if (!cv || !cv.isConnected || !cv.clientWidth) return;
+  const { ctx, w, h } = LAB.fitCanvas(cv), T0 = LAB.theme(), v = exp.panel.values, T = v.T;
+  const half = h / 2, col = BB.color(T), fixed = v.expo === 'fixed', bright = fixed ? col.bright : BB.autoBright(T);
+  // exposición automática: solo el tono, y únicamente si la luz supera el umbral de visión (punto de Draper)
+  const css = fixed ? col.css : (bright > 0 ? (() => { const m = col.cssFull.match(/\d+/g).map(Number), lin = u => { u /= 255; return u <= 0.04045 ? u / 12.92 : ((u + 0.055) / 1.055) ** 2.4; }, enc = u => Math.round(255 * (u <= 0.0031308 ? 12.92 * u : 1.055 * u ** (1 / 2.4) - 0.055)); return `rgb(${m.map(x => enc(lin(x) * bright)).join(',')})`; })() : 'rgb(0,0,0)');
+  // panel visible
+  ctx.fillStyle = '#030305'; ctx.fillRect(0, 0, w, half);
+  ctx.fillStyle = T0['ink-2']; ctx.font = `11px ${T0.body}`; ctx.fillText('A simple vista (en la oscuridad)', 10, 16);
+  const cx = w / 2, cy = half / 2 + 8, r = Math.min(w, half) * 0.26;
+  if (bright > 0.01) { const g = ctx.createRadialGradient(cx, cy, r * 0.6, cx, cy, r * (1.6 + 1.2 * bright)); g.addColorStop(0, css.replace('rgb', 'rgba').replace(')', `,${0.5 * bright})`)); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r * 3, 0, 7); ctx.fill(); }
+  if (v.emitter === 'cavity') {
+    const wall = fixed ? `rgb(${Math.round(col.r * 0.8)},${Math.round(col.g * 0.8)},${Math.round(col.b * 0.8)})` : css;
+    ctx.fillStyle = bright > 0.01 ? wall : '#16181d'; ctx.fillRect(cx - r * 1.2, cy - r, r * 2.4, r * 2);
+    ctx.fillStyle = bright > 0.01 ? css : '#000'; ctx.beginPath(); ctx.arc(cx, cy, r * 0.32, 0, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.15)'; ctx.strokeRect(cx - r * 1.2, cy - r, r * 2.4, r * 2);
+    ctx.fillStyle = T0['ink-3']; ctx.font = `10px ${T0.body}`; ctx.textAlign = 'center'; ctx.fillText('orificio: cuerpo negro ideal', cx, cy + r + 16); ctx.textAlign = 'left';
+  } else {
+    const g2 = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+    if (bright > 0.01) { const m = css.match(/\d+/g).map(Number), sh = f => `rgb(${m.map(x => Math.min(255, Math.round(x * f))).join(',')})`; g2.addColorStop(0, sh(1.12)); g2.addColorStop(0.5, css); g2.addColorStop(1, sh(0.7)); }
+    else { g2.addColorStop(0, '#202329'); g2.addColorStop(1, '#0b0c0f'); }
+    ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill();
+  }
+  ctx.fillStyle = T0.ink; ctx.font = `12px ${T0.mono}`; ctx.textAlign = 'center'; ctx.fillText(`${U.fmt(T, 5)} K · ${BB.visible(T) ? BB.colorName(T).split(',')[0].split('(')[0].trim() : 'se ve negro'}`, cx, half - 10);
+  if (!BB.visible(T)) { ctx.fillStyle = T0['ink-3']; ctx.font = `10px ${T0.body}`; ctx.fillText(`luminancia ${U.fmt(BB.luminance(T), 2)} cd/m² < umbral del ojo`, cx, half - 26); } ctx.textAlign = 'left';
+  // cámara térmica 8–14 µm
+  const y0 = half; ctx.fillStyle = '#000'; ctx.fillRect(0, y0, w, half);
+  const Tmin = 280, Tmax = Math.max(330, T * 1.08), Lmin = BB.thermalBand(Tmin), Lmax = BB.thermalBand(Tmax), u = t => (BB.thermalBand(t) - Lmin) / (Lmax - Lmin);
+  const bg = BB.ironbow(u(293)); ctx.fillStyle = bg; ctx.fillRect(0, y0 + 22, w - 46, half - 22);
+  ctx.fillStyle = T0['ink-2']; ctx.font = `11px ${T0.body}`; ctx.fillText('Cámara térmica (8–14 µm)', 10, y0 + 16);
+  const ccx = (w - 46) / 2, ccy = y0 + 22 + (half - 22) / 2, rr = Math.min(w - 46, half - 22) * 0.3;
+  const objc = BB.ironbow(u(T)), g3 = ctx.createRadialGradient(ccx, ccy, 0, ccx, ccy, rr * 1.35);
+  g3.addColorStop(0, objc); g3.addColorStop(0.72, objc); g3.addColorStop(1, bg);
+  ctx.fillStyle = g3; ctx.beginPath(); if (v.emitter === 'cavity') ctx.rect(ccx - rr * 1.25, ccy - rr, rr * 2.5, rr * 2); else ctx.arc(ccx, ccy, rr * 1.2, 0, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(6, y0 + half - 22, 150, 18); ctx.fillStyle = '#fff'; ctx.font = `10px ${T0.mono}`; ctx.fillText(`objeto ${U.fmt(T, 4)} K · fondo 293 K`, 10, y0 + half - 9);
+  // barra de escala
+  const bx = w - 36, by0 = y0 + 26, by1 = y0 + half - 10;
+  for (let py = by0; py <= by1; py++) { ctx.fillStyle = BB.ironbow(1 - (py - by0) / (by1 - by0)); ctx.fillRect(bx, py, 10, 1); }
+  ctx.font = `9px ${T0.mono}`; ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(bx - 44, by0 - 2, 41, 12); ctx.fillRect(bx - 44, by1 - 10, 41, 12);
+  ctx.fillStyle = '#fff'; ctx.fillText(`${Math.round(Tmax)} K`, bx - 5, by0 + 7); ctx.fillText(`${Tmin} K`, bx - 5, by1); ctx.textAlign = 'left';
+};
+
+/* ------------------------------ gráficas y datos ------------------------------ */
+exp.drawCharts = function () {
+  const cs = exp.charts; if (!cs) return;
+  const T = exp.panel.values.T, Ts = [], P = [], th = [], wl = [], fu = [], fv = [], fi = [];
+  for (let i = 0; i <= 200; i++) { const t = 100 * 100 ** (i / 200); Ts.push(t); P.push(BB.power(t)); const b = BB.bands(t); fu.push(100 * b.uv); fv.push(100 * b.vis); fi.push(100 * b.ir); }
+  for (let i = 0; i <= 100; i++) { const inv = 0.1 + 9.9 * i / 100; th.push(inv); wl.push(BB.b * 1e6 * inv / 1000); }
+  const sv = exp.saved;
+  let slope = null;
+  if (sv.length >= 2) { const xs = sv.map(s => Math.log(s.T)), ys = sv.map(s => Math.log(Math.PI * s.area)); const mx = xs.reduce((a, b) => a + b) / xs.length, my = ys.reduce((a, b) => a + b) / ys.length; let sxx = 0, sxy = 0; xs.forEach((x, i) => { sxx += (x - mx) ** 2; sxy += (x - mx) * (ys[i] - my); }); slope = sxx > 0 ? sxy / sxx : null; }
+  const lg = Math.log10; cs.stefan.set([{ label: 'σT⁴', x: Ts.map(lg), y: P, color: 'c1', width: 2 }, { label: slope !== null ? `guardadas (pendiente log–log ${U.fmt(slope, 6)})` : 'curvas guardadas', x: sv.map(s => lg(s.T)), y: sv.map(s => Math.PI * s.area), color: 'c2', points: true, width: 0.01 }, { label: 'actual', x: [lg(T)], y: [BB.power(T)], color: 'ink', points: true, width: 0.01 }]);
+  cs.wien.set([{ label: 'λ_max = b/T', x: th, y: wl, color: 'c1', width: 2 }, { label: 'máximos numéricos guardados', x: sv.map(s => 1000 / s.T), y: sv.map(s => s.lp * 1e6), color: 'c2', points: true, width: 0.01 }, { label: 'actual', x: [1000 / T], y: [BB.lambdaMax(T) * 1e6], color: 'ink', points: true, width: 0.01 }]);
+  cs.bands.set([{ label: 'ultravioleta', x: Ts, y: fu, color: 'c3', width: 2 }, { label: 'visible', x: Ts, y: fv, color: 'c4', width: 2 }, { label: 'infrarrojo', x: Ts, y: fi, color: 'c2', width: 2 }, { label: 'T actual', x: [T, T], y: [0, 100], color: 'ink-3', dash: [3, 3] }]);
+  const lx = [], pl = [], rj = [], wa = []; for (let i = 0; i <= 300; i++) { const e = -2 + 5 * i / 300, l = 10 ** e * 1e-6; lx.push(e); pl.push(BB.planck(l, T) * UNIT); rj.push(BB.rj(l, T) * UNIT); wa.push(BB.wienApprox(l, T) * UNIT); }
+  cs.rj.set([{ label: 'Planck', x: lx, y: pl, color: 'c1', width: 2.2 }, { label: 'Rayleigh–Jeans', x: lx, y: rj, color: 'c5', dash: [6, 4] }, { label: 'Wien (aprox.)', x: lx, y: wa, color: 'c2', dash: [2, 3] }]);
+  const ref = sv[0];
+  const rows = sv.map(s => el('tr', el('td', U.fmt(s.T, 6)), el('td.num', U.fmt(s.lp * 1e6, 7)), el('td.num', U.fmt(s.lp * 1e6 * s.T, 7)), el('td.num', U.fmt(s.area, 7)), el('td.num', U.fmt(BB.sigma * s.T ** 4 / Math.PI, 7)), el('td.num', U.fmt(s.area / ref.area, 6)), el('td.num', U.fmt((s.T / ref.T) ** 4, 6))));
+  exp.tbl.replaceChildren(el('table.tests.data', el('thead', el('tr', ...['T [K]', 'λ_max numérico [µm]', 'λ_max·T [µm·K]', 'área ∫B dλ', 'σT⁴/π', 'área / área₁', '(T/T₁)⁴'].map(x => el('th', x)))), el('tbody', rows.length ? rows : [el('tr', el('td', { colspan: 7 }, 'Guarde curvas con «＋ Guardar curva actual».'))])));
+};
+exp.exportCSV = function () {
+  const T = exp.panel.values.T;
+  let txt = `# Laboratorio de radiación de cuerpo negro ${LAB.version} · ${U.nowStamp()} · T = ${T} K\n# B en W/(sr·m²·m); RJ = Rayleigh–Jeans\n`;
+  const rows = []; for (let i = 0; i <= 600; i++) { const l = 10 ** (-7.5 + 4 * i / 600); rows.push([l, BB.planck(l, T), BB.rj(l, T)]); }
+  txt += LAB.io.toCSV(['lambda_m', 'B_planck', 'B_rayleigh_jeans'], rows);
+  txt += '\n# curvas guardadas\n' + LAB.io.toCSV(['T_K', 'lambda_max_num_m', 'lambda_max_T_mK', 'area_W_sr_m2', 'sigma_T4_pi'], exp.saved.map(s => [s.T, s.lp, s.lp * s.T, s.area, BB.sigma * s.T ** 4 / Math.PI]));
+  LAB.io.exportText('cuerpo_negro.csv', txt, 'text/csv', 'Exportar datos (CSV)');
+};
+exp.onTab = k => setTimeout(() => { exp.drawSpectrum(); exp.drawEmitter(); if (k === 'charts') exp.drawCharts(); }, 0);
+exp.redraw = () => { exp.drawSpectrum(); exp.drawEmitter(); if (exp.currentTab === 'charts') exp.drawCharts(); };
+
+/* ------------------------------ retos y teoría ------------------------------ */
+exp.buildGuide = function (root) {
+  const sec = el('div.panel.only-sec', { style: 'display:grid;gap:9px' }, el('h3', '¿Por qué los objetos calientes brillan?'),
+    el('p', 'Todo lo que tiene temperatura emite radiación: tú, una taza de café, el Sol. Un «cuerpo negro» es un objeto ideal que absorbe toda la luz que le llega; por eso, frío, se ve negro. Pero al calentarse emite su propia luz, y entonces ya no se ve negro.'),
+    el('p', 'A temperatura ambiente o en una taza de café (≈ 300–350 K) casi toda la emisión es infrarroja: invisible para el ojo, pero una cámara térmica la ve. Hacia 800 K aparece un rojo muy oscuro; un hierro a 1500 K brilla rojo anaranjado; el filamento de una bombilla (3000 K) es amarillo anaranjado; el Sol (5800 K) emite todos los colores mezclados y lo vemos blanco; las estrellas de 10 000 K son blanco azuladas.'),
+    el('p', 'Regla práctica: más caliente ⇒ el pico se mueve a longitudes de onda más cortas (ley de Wien) y la energía total crece muchísimo (al duplicar T, se multiplica por 16).'));
+  const uni = el('div.panel.only-uni', { style: 'display:grid;gap:9px' }, el('h3', 'Planck, Wien y Stefan–Boltzmann'),
+    el('div.eq', 'B_λ(T) = (2hc²/λ⁵) · 1/(e^{hc/λk_BT} − 1)'),
+    el('div.eq', 'Rayleigh–Jeans (clásica): B_λ = 2ck_BT/λ⁴  (u_λ = 8πk_BT/λ⁴)'),
+    el('div.eq', 'λ_max T = b = hc/(4,9651 k_B) = 2897,77 µm·K'),
+    el('div.eq', '∫₀^∞ B_λ dλ = σT⁴/π,   P/A = σT⁴,   σ = 2π⁵k⁴/(15h³c²)'),
+    el('div.eq', 'en frecuencia: ν_pk = 2,8214 k_BT/h  (≠ c/λ_max)'),
+    el('p', 'La teoría clásica asigna k_BT a cada modo de la cavidad y, como hay infinitos modos de λ corta, la energía total diverge: la catástrofe ultravioleta. Planck (1900) supuso que la energía de cada modo solo toma valores nhν; los modos con hν ≫ k_BT quedan «congelados» y la curva cae a cero. Así nació la física cuántica.'),
+    el('p', 'Numéricamente, la función se evalúa con expm1(x) para x pequeño (evita perder precisión) y con e^{−x} para x grande (evita el desbordamiento de e^x).'));
+  const card = (title, text, extra, check, cls) => { const out = el('div.small'); return el('div.qcard' + (cls || ''), el('b', title), el('p', text), extra || null, el('div.btn-row', el('button.btn.small', { type: 'button', onclick: () => { const r = check(); out.textContent = r.text; out.style.color = r.ok ? 'var(--good)' : 'var(--warn)'; exp.log.add('reto', title + ': ' + r.text); } }, 'Comprobar')), out); };
+  const tIn = el('input', { type: 'number', step: '1', placeholder: 'T anotada [K]', 'aria-label': 'Temperatura anotada', style: 'width:150px' });
+  const c1 = card('Reto 1 · Pico en la luz roja', 'Ajuste la temperatura hasta que el pico de emisión quede exactamente en 0,70 µm (luz roja). Anote qué temperatura marca.', el('div.btn-row', tIn), () => {
+    const T = exp.panel.values.T, lm = BB.lambdaMax(T) * 1e6;
+    if (Math.abs(lm - 0.70) > 0.002) return { ok: false, text: `Ahora λ_max = ${U.fmt(lm, 4)} µm. ${lm > 0.70 ? 'Suba la temperatura.' : 'Baje la temperatura.'}` };
+    const note = Number(tIn.value);
+    if (tIn.value && Math.abs(note - T) > 5) return { ok: false, text: `El pico está en ${U.fmt(lm, 4)} µm, pero anotó ${note} K y el aparato marca ${T} K.` };
+    return { ok: true, text: `¡Logrado! λ_max = ${U.fmt(lm, 4)} µm con T = ${T} K (exacto: 2898/0,70 = 4140 K). Curiosidad: aunque el pico está en el rojo, el objeto se ve ${BB.colorName(T)}, porque emite también todos los demás colores.` };
+  });
+  const q = el('div.opts', ['Porque está fría y no emite nada', 'Porque emite casi todo en infrarrojo, invisible para el ojo', 'Porque la cámara térmica la ilumina'].map((tx, i) => el('label', el('input', { type: 'radio', name: 'bq', value: i }), el('span', tx))));
+  const qfb = el('div.small');
+  const c4 = el('div.qcard.only-sec', el('b', 'Reto 2 · La taza en la oscuridad'), el('p', 'Una taza de café a 350 K no se ve en una habitación oscura, pero en la cámara térmica brilla. ¿Por qué?'), q,
+    el('div.btn-row', el('button.btn.small', { type: 'button', onclick: () => { const s = q.querySelector('input:checked'); if (!s) return; const ok = s.value === '1'; qfb.textContent = ok ? `Correcto: a 350 K el pico está en ${U.fmt(BB.lambdaMax(350) * 1e6, 3)} µm y la fracción de energía visible es solo ${U.fmt(BB.bands(350).vis, 2)}. Compruébelo con el preajuste «Taza».` : 'Pruebe el preajuste «Taza»: la curva está entera en el infrarrojo (pico ≈ 8,3 µm).'; qfb.style.color = ok ? 'var(--good)' : 'var(--warn)'; exp.log.add('reto', 'Taza en la oscuridad: ' + (ok ? 'correcta' : 'incorrecta')); } }, 'Registrar respuesta')), qfb);
+  const c2 = card('Reto 3 · Factor de Stefan', 'Guarde la curva a 2000 K, luego duplique a 4000 K y guárdela. Compruebe con el área numérica bajo las curvas que la potencia se multiplica por 16 = 2⁴.', null, () => {
+    const a = exp.saved.find(s => Math.abs(s.T - 2000) < 0.5), b = exp.saved.find(s => Math.abs(s.T - 4000) < 0.5);
+    if (!a || !b) return { ok: false, text: `Faltan curvas guardadas: ${a ? '' : '2000 K '}${b ? '' : '4000 K'}. Use «＋ Guardar curva actual».` };
+    const r = b.area / a.area; return { ok: Math.abs(r - 16) < 1e-3, text: `Área(4000 K)/Área(2000 K) = ${U.fmt(r, 8)} (numérico) → 2⁴ = 16. P/A: ${fmtP(Math.PI * a.area)} → ${fmtP(Math.PI * b.area)}.` };
+  }, '.only-uni');
+  const c3 = card('Reto 4 · Ley de Wien', 'Guarde tres curvas a temperaturas distintas. La app busca numéricamente el máximo de cada una (sin usar la ley de Wien): compruebe que λ_max·T es constante.', null, () => {
+    const s = exp.saved; if (s.length < 3) return { ok: false, text: `Lleva ${s.length} curvas guardadas; necesita al menos 3.` };
+    const pr = s.map(c => c.lp * 1e6 * c.T), mx = Math.max(...pr), mn = Math.min(...pr);
+    return { ok: (mx - mn) / mn < 1e-6, text: `λ_max·T = ${pr.map(p => U.fmt(p, 7)).join(' · ')} µm·K → constante (b = ${U.fmt(BB.b * 1e6, 7)} µm·K).` };
+  }, '.only-uni');
+  root.append(el('div.guide', el('div', { style: 'display:grid;gap:12px' }, sec, uni), el('div.panel', { style: 'display:grid;gap:10px' }, el('h3', 'Retos de laboratorio'), c1, c4, c2, c3)));
+};
+
+/* ------------------------------ pruebas ------------------------------ */
+const Tt = LAB.Tests;
+const L1 = 'Constantes y leyes', L2 = 'Precisión numérica', L3 = 'Color y bandas';
+Tt.register('bb', L1, 'const', 'σ y b derivados de h, c, k_B coinciden con CODATA 2018', () => {
+  const es = Math.abs(BB.sigma / 5.670374419e-8 - 1), eb = Math.abs(BB.b / 2.897771955e-3 - 1);
+  const xr = BB.XMAX - 5 * (1 - Math.exp(-BB.XMAX));
+  return LAB.res(es < 1e-9 && eb < 1e-9 && Math.abs(xr) < 1e-14, `σ = ${BB.sigma.toExponential(10)} (dif. rel. ${es.toExponential(1)}); b = ${BB.b.toExponential(10)} m·K (${eb.toExponential(1)}); residuo de x = 5(1 − e^{−x}): ${xr.toExponential(1)}.`);
+}, '10⁻⁹');
+Tt.register('bb', L1, 'wien', 'Máximo numérico de la curva = b/T (ley de Wien)', () => {
+  let mx = 0; const out = [];
+  for (const T of [100, 300, 1500, 5800, 10000]) { const lp = BB.numericPeak(T), e = Math.abs(lp * T / BB.b - 1); mx = Math.max(mx, e); out.push(`${T} K: ${(lp * 1e6).toPrecision(7)} µm`); }
+  return LAB.res(mx < 1e-7, out.join('; ') + `; máx dif. rel. ${mx.toExponential(1)}.`);
+}, '10⁻⁷');
+Tt.register('bb', L1, 'stefan', 'Área numérica ∫B_λdλ = σT⁴/π (Stefan–Boltzmann)', () => {
+  let mx = 0; for (const T of [100, 350, 2000, 5800, 10000]) mx = Math.max(mx, Math.abs(BB.integrate(T) / (BB.sigma * T ** 4 / Math.PI) - 1));
+  return LAB.res(mx < 1e-8, `Simpson en ln λ (10 nm – 10 cm, 4000 intervalos): máx diferencia relativa ${mx.toExponential(2)} para T = 100 … 10 000 K.`);
+}, '10⁻⁸');
+Tt.register('bb', L1, 'T4', 'Duplicar T multiplica la potencia por 16', () => {
+  const r = BB.integrate(4000) / BB.integrate(2000), r2 = BB.integrate(600) / BB.integrate(300);
+  return LAB.res(Math.abs(r - 16) < 1e-6 && Math.abs(r2 - 16) < 1e-6, `Área(4000)/Área(2000) = ${r.toFixed(9)}; Área(600)/Área(300) = ${r2.toFixed(9)}.`);
+}, '10⁻⁶');
+Tt.register('bb', L1, 'nupk', 'Pico en frecuencia: ν_pk = 2,8214 k_BT/h ≠ c/λ_max', () => {
+  const T = 5800, f = (nu, t) => BB.planckNu(nu, t); let best = 0, bv = -1;
+  for (let i = 0; i <= 4000; i++) { const nu = 1e12 * 10 ** (i / 1000); const v = f(nu, T); if (v > bv) { bv = v; best = nu; } }
+  let a = best * 0.99, b = best * 1.01; for (let i = 0; i < 100; i++) { const m1 = a + (b - a) / 3, m2 = b - (b - a) / 3; if (f(m1, T) < f(m2, T)) a = m1; else b = m2; }
+  const nu = (a + b) / 2, th = BB.XNU * BB.k * T / BB.h, cl = BB.c / BB.lambdaMax(T);
+  return LAB.res(Math.abs(nu / th - 1) < 1e-7, `T = 5800 K: ν_pk numérico = ${(nu / 1e12).toFixed(4)} THz = 2,8214 kT/h (${(th / 1e12).toFixed(4)} THz), mientras que c/λ_max = ${(cl / 1e12).toFixed(2)} THz: los picos en λ y en ν no coinciden.`);
+}, '10⁻⁷');
+Tt.register('bb', L2, 'overflow', 'Sin desbordamientos ni NaN en todo el dominio', () => {
+  let bad = 0, n = 0, maxv = 0;
+  for (let e = -12; e <= 1; e += 0.05) for (const T of [100, 101, 350, 3000, 10000]) { const v = BB.planck(10 ** e, T); n++; if (!Number.isFinite(v) || v < 0) bad++; maxv = Math.max(maxv, v); }
+  const z = BB.planck(1e-9, 100), xbig = BB.C2 / (1e-9 * 100);
+  return LAB.res(bad === 0 && z === 0, `${n} evaluaciones (λ de 1 pm a 10 m): ${bad} no finitas; en λ = 1 nm, T = 100 K el exponente es x = ${xbig.toExponential(3)} (e^x desbordaría) y B = ${z}.`);
+}, '0 fallos');
+Tt.register('bb', L2, 'rjlim', 'Límite clásico: Planck → Rayleigh–Jeans para λ larga', () => {
+  const T = 5800, l = 1e-2, x = BB.C2 / (l * T), r = BB.planck(l, T) / BB.rj(l, T), ex = x / Math.expm1(x);
+  return LAB.res(Math.abs(r - ex) < 1e-12 && r > 0.9998, `λ = 1 cm, T = 5800 K: x = ${x.toExponential(3)}, Planck/RJ = ${r.toFixed(12)} = x/(eˣ − 1).`);
+}, '10⁻¹²');
+Tt.register('bb', L2, 'wienlim', 'Límite de Wien: Planck → Wien para λ corta', () => {
+  const T = 3000, l = 0.2e-6, x = BB.C2 / (l * T), r = BB.planck(l, T) / BB.wienApprox(l, T);
+  return LAB.res(Math.abs(r - 1) < 1e-10, `λ = 0,2 µm, T = 3000 K: x = ${x.toFixed(2)}, Planck/Wien − 1 = ${(r - 1).toExponential(2)} (≈ e^{−x}).`);
+}, '10⁻¹⁰');
+Tt.register('bb', L2, 'expm1', 'Precisión con x pequeño (expm1 frente a exp − 1)', () => {
+  const l = 10, T = 10000, x = BB.C2 / (l * T), pre = 2 * BB.h * BB.c * BB.c / l ** 5, good = BB.planck(l, T), naive = pre / (Math.exp(x) - 1), exact = pre / (x * (1 + x / 2 + x * x / 6));
+  return LAB.res(Math.abs(good / exact - 1) < 1e-12, `λ = 10 m, T = 10 000 K (x = ${x.toExponential(2)}): con expm1 error ${Math.abs(good / exact - 1).toExponential(1)}; con exp(x) − 1 sería ${Math.abs(naive / exact - 1).toExponential(1)}.`);
+}, '10⁻¹²');
+Tt.register('bb', L3, 'frac', 'Fracciones por banda: series exactas = integración numérica', () => {
+  let mx = 0;
+  for (const T of [300, 1500, 5800, 10000]) for (const l of [0.38e-6, 0.75e-6, 3e-6, 20e-6]) mx = Math.max(mx, Math.abs(BB.fracBelow(l, T) - BB.integrate(T, 1e-9, l, 6000) / (BB.sigma * T ** 4 / Math.PI)));
+  const s = BB.bands(5800);
+  return LAB.res(mx < 1e-9 && Math.abs(s.uv + s.vis + s.ir - 1) < 1e-14, `máx diferencia ${mx.toExponential(2)}; Sol (5800 K): UV ${(100 * s.uv).toFixed(2)} %, visible ${(100 * s.vis).toFixed(2)} %, IR ${(100 * s.ir).toFixed(2)} %.`);
+}, '10⁻⁹');
+Tt.register('bb', L3, 'cmf', 'Funciones de color: espectro plano → blanco (x ≈ y ≈ 1/3)', () => {
+  const [X, Y, Z] = BB.xyzOf(() => 1), s = X + Y + Z;
+  return LAB.res(Math.abs(X / s - 1 / 3) < 0.003 && Math.abs(Y / s - 1 / 3) < 0.003, `x = ${(X / s).toFixed(4)}, y = ${(Y / s).toFixed(4)} (iluminante E: 0,3333).`);
+}, '±0,003');
+Tt.register('bb', L3, 'locus', 'Cromaticidad sobre el lugar de Planck (valores de referencia)', () => {
+  const ref = [[2000, 0.5267, 0.4133], [3000, 0.4369, 0.4041], [5800, 0.3260, 0.3354], [10000, 0.2807, 0.2884]]; let mx = 0; const out = [];
+  for (const [T, x, y] of ref) { const c = BB.color(T).xy; mx = Math.max(mx, Math.hypot(c[0] - x, c[1] - y)); out.push(`${T} K: (${c[0].toFixed(4)}, ${c[1].toFixed(4)})`); }
+  return LAB.res(mx < 0.004, out.join('; ') + `; máx distancia ${mx.toFixed(4)}.`);
+}, '< 0,004');
+Tt.register('bb', L3, 'colors', 'Colores: negro a 350 K, rojo a 1000 K, blanco a 5800 K, azulado a 10 000 K', () => {
+  const a = BB.color(350), b = BB.color(1000), c = BB.color(5800), d = BB.color(10000);
+  const ok = a.bright < 1e-6 && b.chroma[0] === 1 && b.chroma[1] < 0.1 && Math.min(...c.chroma) > 0.75 && d.chroma[2] === 1 && d.chroma[0] < d.chroma[2];
+  return LAB.res(ok, `350 K: brillo ${a.bright.toExponential(1)}; 1000 K: ${b.css}; 5800 K: ${c.css}; 10 000 K: ${d.css}.`);
+}, 'cualitativo');
+Tt.register('bb', L3, 'draper', 'Bajo el punto de Draper (≈ 798 K) el objeto se ve negro en cualquier exposición', () => {
+  const lo = [300, 350, 396, 600, 790].map(T => BB.autoBright(T)), hi = [800, 1000, 1500].map(T => BB.autoBright(T));
+  const ok = lo.every(b => b === 0) && hi.every(b => b > 0) && BB.color(396).bright < 1e-4;
+  return LAB.res(ok, `brillo automático a 300–790 K: ${lo.join(', ')}; a 800, 1000 y 1500 K: ${hi.map(b => b.toFixed(2)).join(', ')}; luminancia a 396 K = ${BB.luminance(396).toExponential(1)} cd/m² frente al umbral ${BB.luminance(798).toExponential(1)} cd/m².`);
+}, 'exacto');
+Tt.register('bb', L3, 'thermal', 'Cámara térmica: radiancia 8–14 µm crece con T', () => {
+  let ok = true, prev = 0; for (const T of [250, 293, 310, 350, 500, 1000]) { const v = BB.thermalBand(T); if (!(v > prev)) ok = false; prev = v; }
+  return LAB.res(ok, `L(293 K) = ${BB.thermalBand(293).toFixed(2)} W/(m²·sr); L(350 K) = ${BB.thermalBand(350).toFixed(2)} W/(m²·sr): la taza destaca un ${(100 * (BB.thermalBand(350) / BB.thermalBand(293) - 1)).toFixed(0)} % sobre el fondo.`);
+}, 'monótono');
+Tt.register('bb', L3, 'csv', 'Exportación CSV sin pérdida de precisión', () => {
+  const v = BB.planck(0.5e-6, 5800), back = Number(LAB.io.toCSV(['B'], [[v]]).trim().split('\n')[1]);
+  return LAB.res(back === v, `${v} → ${back}.`);
+}, 'igualdad exacta');
+})();
+
+'use strict';
+/* Arranque de la aplicación de radiación de cuerpo negro (una sola vista). */
+(function () {
+  LAB.redrawAll = function () { LAB.invalidateTheme(); const e = LAB.experiments.bb; if (e && e.redraw) e.redraw(); };
+  function boot() {
+    const e = LAB.experiments.bb;
+    try { e.init(); } catch (err) { console.error(err); document.getElementById('labs').textContent = 'No se pudo iniciar la aplicación: ' + err.message; return; }
+    document.getElementById('lab-bb').hidden = false;
+    LAB.current = 'bb';
+    let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(LAB.redrawAll, 120); });
+    setTimeout(LAB.redrawAll, 0);
+    LAB.runAllTests = async function (onProgress) { await LAB.Tests.run(() => true, onProgress); return [{ experimento: 'bb', niveles: LAB.Tests.levels('bb').map(l => Object.assign({ nivel: l }, LAB.Tests.summary('bb', l))), pruebas: LAB.Tests.dump('bb') }]; };
+    LAB.ready = true;
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+
+</script>
+</body>
+</html>
